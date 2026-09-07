@@ -103,6 +103,14 @@ function buildBoard(eventId) {
 module.exports = function makeGameRouter(broadcast) {
   const router = express.Router();
 
+  // Public event listing — no code word exposed
+  router.get('/events', (req, res, next) => {
+    try {
+      const events = db.all("SELECT id, name, status, team1_name, team2_name FROM events ORDER BY created_at DESC");
+      res.json(events);
+    } catch (err) { next(err); }
+  });
+
   router.get('/events/:id/board', (req, res, next) => {
     try {
       const board = buildBoard(req.params.id);

@@ -9,7 +9,7 @@ const boardEl = document.getElementById('board');
 const statusBar = document.getElementById('status-bar');
 
 async function loadEvents() {
-  const res = await fetch('/api/admin/events');
+  const res = await fetch('/api/events');
   const events = await res.json();
   events.forEach(ev => {
     const opt = document.createElement('option');
