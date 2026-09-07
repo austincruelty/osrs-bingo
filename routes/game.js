@@ -89,18 +89,22 @@ function buildBoard(eventId) {
 module.exports = function makeGameRouter(broadcast) {
   const router = express.Router();
 
-  router.get('/events/:id/board', (req, res) => {
-    const board = buildBoard(req.params.id);
-    if (!board) return res.status(404).json({ error: 'Event not found' });
-    res.json(board);
+  router.get('/events/:id/board', (req, res, next) => {
+    try {
+      const board = buildBoard(req.params.id);
+      if (!board) return res.status(404).json({ error: 'Event not found' });
+      res.json(board);
+    } catch (err) { next(err); }
   });
 
-  router.get('/events/:id/tiles', (req, res) => {
-    const tiles = db.all('SELECT * FROM tiles WHERE event_id = ? ORDER BY row, col', [req.params.id]);
-    res.json(tiles.map(tile => ({
-      ...tile,
-      items: db.all('SELECT * FROM tile_items WHERE tile_id = ?', [tile.id])
-    })));
+  router.get('/events/:id/tiles', (req, res, next) => {
+    try {
+      const tiles = db.all('SELECT * FROM tiles WHERE event_id = ? ORDER BY row, col', [req.params.id]);
+      res.json(tiles.map(tile => ({
+        ...tile,
+        items: db.all('SELECT * FROM tile_items WHERE tile_id = ?', [tile.id])
+      })));
+    } catch (err) { next(err); }
   });
 
   router.post('/events/:id/submit', upload.single('screenshot'), async (req, res) => {

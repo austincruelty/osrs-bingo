@@ -26,6 +26,12 @@ async function main() {
   app.use('/api/admin', adminRoutes(broadcast));
   app.use('/api', makeGameRouter(broadcast));
 
+  // Return JSON errors instead of HTML so the browser can read them
+  app.use((err, req, res, next) => {
+    console.error(err);
+    res.status(500).json({ error: err.message || 'Internal server error' });
+  });
+
   io.on('connection', (socket) => {
     socket.on('join-event', (eventId) => socket.join(`event-${eventId}`));
     socket.on('leave-event', (eventId) => socket.leave(`event-${eventId}`));
