@@ -183,18 +183,34 @@ async function createEvent() {
   const code_word = document.getElementById('ev-codeword').value.trim();
   const team1_name = document.getElementById('ev-t1').value.trim() || 'Team 1';
   const team2_name = document.getElementById('ev-t2').value.trim() || 'Team 2';
-  if (!name || !code_word) { alert('Name and code word required.'); return; }
-  const res = await fetch('/api/admin/events', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({name, code_word, team1_name, team2_name})
-  });
-  const data = await res.json();
-  if (data.id) {
-    document.getElementById('create-status').textContent = `Event created (id ${data.id})`;
-    document.getElementById('ev-name').value = '';
-    document.getElementById('ev-codeword').value = '';
-    loadEvents();
+  const statusEl = document.getElementById('create-status');
+  if (!name || !code_word) {
+    statusEl.style.color = '#e05050';
+    statusEl.textContent = 'Event name and code word are required.';
+    return;
+  }
+  statusEl.style.color = '#888';
+  statusEl.textContent = 'Creating...';
+  try {
+    const res = await fetch('/api/admin/events', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name, code_word, team1_name, team2_name})
+    });
+    const data = await res.json();
+    if (data.id) {
+      statusEl.style.color = '#50c878';
+      statusEl.textContent = `Event "${name}" created!`;
+      document.getElementById('ev-name').value = '';
+      document.getElementById('ev-codeword').value = '';
+      loadEvents();
+    } else {
+      statusEl.style.color = '#e05050';
+      statusEl.textContent = data.error || 'Something went wrong.';
+    }
+  } catch (err) {
+    statusEl.style.color = '#e05050';
+    statusEl.textContent = 'Network error — is the server running?';
   }
 }
 
@@ -205,7 +221,6 @@ async function selectEvent(ev) {
   document.getElementById('board-section').style.display = 'block';
   document.getElementById('submissions-section').style.display = 'block';
   document.querySelectorAll('.event-item').forEach(el => el.classList.remove('selected'));
-  event.currentTarget && event.currentTarget.classList.add('selected');
   await loadBoardData();
   initGrid();
   loadSubmissions();
