@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OSRS Clan Bingo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #1a1a2e;
+      color: #e0d5b7;
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+    header {
+      background: #16213e;
+      border-bottom: 2px solid #c89b3c;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    header h1 { color: #c89b3c; font-size: 1.4rem; }
+    #event-select { background: #0f3460; color: #e0d5b7; border: 1px solid #c89b3c; padding: 6px 10px; border-radius: 4px; }
+    #submit-btn {
+      background: #c89b3c; color: #1a1a2e; font-weight: bold;
+      border: none; padding: 8px 18px; border-radius: 4px; cursor: pointer;
+    }
+    #submit-btn:hover { background: #e0b84a; }
+    .team-scoreboard {
+      display: flex; gap: 16px; padding: 12px 24px;
+      background: #16213e; border-bottom: 1px solid #333;
+      flex-wrap: wrap;
+    }
+    .team-card {
+      flex: 1; min-width: 200px;
+      background: #0f3460; border-radius: 8px; padding: 12px 16px;
+      border: 2px solid transparent;
+    }
+    .team-card.bingo { border-color: #c89b3c; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 8px #c89b3c88; } 50% { box-shadow: 0 0 20px #c89b3c; } }
+    .team-card h2 { font-size: 1rem; margin-bottom: 4px; }
+    .team-card .tiles-done { font-size: 1.8rem; font-weight: bold; color: #c89b3c; }
+    .bingo-badge { background: #c89b3c; color: #1a1a2e; font-size: 0.8rem; font-weight: bold; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+    .board-wrapper { padding: 20px 24px; overflow-x: auto; }
+    .board {
+      display: grid;
+      gap: 6px;
+    }
+    .tile {
+      background: #16213e;
+      border: 2px solid #333;
+      border-radius: 6px;
+      padding: 8px;
+      min-height: 110px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: relative;
+      transition: border-color 0.3s;
+    }
+    .tile.team1-complete { border-color: #4a9eff; }
+    .tile.team2-complete { border-color: #ff6b35; }
+    .tile.both-complete { border-color: #c89b3c; background: #1f1a0e; }
+    .tile-name {
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #c89b3c;
+      text-align: center;
+      border-bottom: 1px solid #333;
+      padding-bottom: 4px;
+      margin-bottom: 4px;
+    }
+    .tile-item {
+      font-size: 0.7rem;
+      padding: 3px 6px;
+      border-radius: 3px;
+      background: #0a0a1a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+    }
+    .tile-item-name { flex: 1; }
+    .team-dots { display: flex; gap: 3px; }
+    .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 1px solid #555;
+      background: #0a0a1a;
+    }
+    .dot.t1-done { background: #4a9eff; border-color: #4a9eff; }
+    .dot.t2-done { background: #ff6b35; border-color: #ff6b35; }
+    .complete-overlay {
+      position: absolute; inset: 0;
+      border-radius: 4px;
+      pointer-events: none;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+    }
+    .legend {
+      display: flex; gap: 16px; padding: 8px 24px; font-size: 0.75rem; flex-wrap: wrap;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+    #status-bar { padding: 8px 24px; font-size: 0.8rem; color: #888; }
+    #upload-modal {
+      display: none; position: fixed; inset: 0;
+      background: #000a; z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    #upload-modal.open { display: flex; }
+    .modal-box {
+      background: #16213e; border: 2px solid #c89b3c;
+      border-radius: 10px; padding: 24px;
+      width: 90%; max-width: 480px;
+    }
+    .modal-box h2 { color: #c89b3c; margin-bottom: 16px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.85rem; margin-bottom: 4px; color: #aaa; }
+    .form-group input, .form-group select {
+      width: 100%; background: #0f3460; color: #e0d5b7;
+      border: 1px solid #444; border-radius: 4px; padding: 8px 10px;
+    }
+    .form-group input[type=file] { padding: 6px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+    .btn-primary { background: #c89b3c; color: #1a1a2e; font-weight: bold; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; flex: 1; }
+    .btn-secondary { background: #333; color: #e0d5b7; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+    #upload-status { margin-top: 10px; font-size: 0.85rem; }
+    #upload-status.error { color: #ff6b6b; }
+    #upload-status.success { color: #6bff9e; }
+    select option { background: #0f3460; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚔️ OSRS Clan Bingo</h1>
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+    <select id="event-select"><option value="">Select Event...</option></select>
+    <button id="submit-btn" onclick="openSubmitModal()">Submit Drop</button>
+    <a href="/admin.html" style="color:#888;font-size:0.8rem;">Admin</a>
+  </div>
+</header>
+
+<div class="team-scoreboard" id="scoreboard" style="display:none">
+  <div class="team-card" id="team1-card">
+    <h2 id="team1-name">Team 1</h2>
+    <div><span class="tiles-done" id="team1-tiles">0</span> tiles</div>
+  </div>
+  <div class="team-card" id="team2-card">
+    <h2 id="team2-name">Team 2</h2>
+    <div><span class="tiles-done" id="team2-tiles">0</span> tiles</div>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#4a9eff"></div> <span id="legend-t1">Team 1 done</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff6b35"></div> <span id="legend-t2">Team 2 done</span></div>
+</div>
+
+<div id="status-bar">Select an event to view the board.</div>
+<div class="board-wrapper"><div class="board" id="board"></div></div>
+
+<!-- Submit Modal -->
+<div id="upload-modal">
+  <div class="modal-box">
+    <h2>Submit a Drop</h2>
+    <div class="form-group">
+      <label>Your RSN (Runescape Name)</label>
+      <input type="text" id="f-player" placeholder="YourName123" maxlength="12">
+    </div>
+    <div class="form-group">
+      <label>Your Team</label>
+      <select id="f-team">
+        <option value="">Select team...</option>
+        <option value="1" id="f-team1-opt">Team 1</option>
+        <option value="2" id="f-team2-opt">Team 2</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Tile</label>
+      <select id="f-tile" onchange="populateItems()">
+        <option value="">Select tile...</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Item on this tile</label>
+      <select id="f-item">
+        <option value="">Select item...</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Screenshot (must show the code word)</label>
+      <input type="file" id="f-screenshot" accept="image/*">
+    </div>
+    <div id="upload-status"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeSubmitModal()">Cancel</button>
+      <button class="btn-primary" onclick="submitDrop()">Submit Drop</button>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/board.js"></script>
+</body>
+</html>

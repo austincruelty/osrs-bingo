@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — OSRS Bingo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #1a1a2e; color: #e0d5b7; font-family: 'Segoe UI', sans-serif; }
+    header { background: #16213e; border-bottom: 2px solid #c89b3c; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { color: #c89b3c; font-size: 1.2rem; }
+    a { color: #888; font-size: 0.8rem; }
+    .container { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+    section { background: #16213e; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #333; }
+    h2 { color: #c89b3c; margin-bottom: 14px; font-size: 1rem; }
+    .form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    input, select { background: #0f3460; color: #e0d5b7; border: 1px solid #444; border-radius: 4px; padding: 8px 10px; }
+    input { flex: 1; min-width: 140px; }
+    .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+    .btn-gold { background: #c89b3c; color: #1a1a2e; font-weight: bold; }
+    .btn-red { background: #b03030; color: #fff; }
+    .btn-green { background: #2a7a3a; color: #fff; }
+    .btn-gray { background: #444; color: #e0d5b7; }
+    .event-list { display: flex; flex-direction: column; gap: 8px; }
+    .event-item { background: #0f3460; border-radius: 6px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; cursor: pointer; border: 2px solid transparent; }
+    .event-item.selected { border-color: #c89b3c; }
+    .event-item .ev-name { font-weight: bold; }
+    .event-item .ev-meta { font-size: 0.75rem; color: #888; }
+    .status-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; }
+    .status-active { background: #2a7a3a; }
+    .status-ended { background: #555; }
+    .board-editor { margin-top: 12px; }
+    .board-grid { display: grid; gap: 4px; margin-bottom: 12px; }
+    .grid-cell {
+      background: #0a0a1a; border: 2px solid #333; border-radius: 4px;
+      min-height: 80px; padding: 6px; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; font-size: 0.75rem; gap: 3px;
+    }
+    .grid-cell:hover { border-color: #c89b3c44; }
+    .grid-cell.filled { border-color: #c89b3c66; }
+    .grid-cell .cell-name { color: #c89b3c; font-weight: bold; }
+    .grid-cell .cell-items { color: #aaa; font-size: 0.65rem; }
+    .tile-editor-modal { display:none; position:fixed; inset:0; background:#000a; z-index:100; align-items:center; justify-content:center; }
+    .tile-editor-modal.open { display:flex; }
+    .modal-box { background:#16213e; border:2px solid #c89b3c; border-radius:10px; padding:24px; width:90%; max-width:440px; }
+    .modal-box h3 { color:#c89b3c; margin-bottom:14px; }
+    .form-group { margin-bottom:10px; }
+    .form-group label { display:block; font-size:0.8rem; color:#aaa; margin-bottom:4px; }
+    .form-group input { width:100%; }
+    .items-list { display:flex; flex-direction:column; gap:6px; margin-bottom:8px; }
+    .item-row { display:flex; gap:6px; }
+    .item-row input { flex:1; }
+    .modal-actions { display:flex; gap:8px; margin-top:14px; }
+    .submissions-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+    .submissions-table th { text-align:left; color:#888; padding:6px 8px; border-bottom:1px solid #333; }
+    .submissions-table td { padding:6px 8px; border-bottom:1px solid #222; vertical-align:top; }
+    .submissions-table img { width:60px; height:40px; object-fit:cover; border-radius:3px; cursor:pointer; }
+    .sub-status { font-size:0.7rem; padding:2px 6px; border-radius:10px; }
+    .sub-approved { background:#2a7a3a; }
+    .sub-pending { background:#7a5a10; }
+    .sub-rejected { background:#7a2020; }
+    #img-preview-modal { display:none; position:fixed; inset:0; background:#000d; z-index:200; align-items:center; justify-content:center; cursor:pointer; }
+    #img-preview-modal.open { display:flex; }
+    #img-preview-modal img { max-width:90vw; max-height:90vh; border-radius:8px; border:2px solid #c89b3c; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>⚙️ Admin Panel — OSRS Bingo</h1>
+  <a href="/">← Back to Board</a>
+</header>
+
+<div class="container">
+  <!-- Create Event -->
+  <section>
+    <h2>Create New Event</h2>
+    <div class="form-row">
+      <input type="text" id="ev-name" placeholder="Event name (e.g. Summer Bingo 2026)">
+      <input type="text" id="ev-codeword" placeholder="Code word (e.g. dropthatitem)">
+      <input type="text" id="ev-t1" placeholder="Team 1 name">
+      <input type="text" id="ev-t2" placeholder="Team 2 name">
+      <button class="btn btn-gold" onclick="createEvent()">Create Event</button>
+    </div>
+    <div id="create-status" style="font-size:0.8rem;color:#6bff9e;"></div>
+  </section>
+
+  <!-- Events List -->
+  <section>
+    <h2>Events</h2>
+    <div class="event-list" id="event-list">Loading...</div>
+  </section>
+
+  <!-- Board Editor (shown when event selected) -->
+  <section id="board-section" style="display:none">
+    <h2>Board Editor — <span id="board-event-name"></span></h2>
+    <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+      <label>Grid size:</label>
+      <select id="grid-rows" onchange="initGrid()">
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5" selected>5</option>
+      </select>
+      <span>×</span>
+      <select id="grid-cols" onchange="initGrid()">
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5" selected>5</option>
+      </select>
+      <button class="btn btn-gray" onclick="initGrid()">Reset Grid</button>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="btn btn-red" onclick="endEvent()">End Event</button>
+        <button class="btn btn-green" onclick="activateEvent()">Set Active</button>
+      </div>
+    </div>
+    <div class="board-editor">
+      <div class="board-grid" id="board-grid"></div>
+    </div>
+  </section>
+
+  <!-- Submissions -->
+  <section id="submissions-section" style="display:none">
+    <h2>Submissions</h2>
+    <div id="submissions-content">Loading...</div>
+  </section>
+</div>
+
+<!-- Tile Editor Modal -->
+<div class="tile-editor-modal" id="tile-modal">
+  <div class="modal-box">
+    <h3>Edit Tile (<span id="modal-pos"></span>)</h3>
+    <div class="form-group">
+      <label>Tile Name</label>
+      <input type="text" id="modal-tile-name" placeholder="e.g. Barrows Armour">
+    </div>
+    <div class="form-group">
+      <label>Required Items (one per row)</label>
+      <div class="items-list" id="modal-items"></div>
+      <button class="btn btn-gray" onclick="addItemRow()" style="font-size:0.8rem;padding:4px 10px;margin-top:4px;">+ Add Item</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeTileModal()">Cancel</button>
+      <button class="btn btn-red" onclick="deleteTile()" id="modal-delete-btn">Delete Tile</button>
+      <button class="btn btn-gold" onclick="saveTile()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Image preview modal -->
+<div id="img-preview-modal" onclick="this.classList.remove('open')">
+  <img id="img-preview" src="" alt="Screenshot">
+</div>
+
+<script>
+let selectedEventId = null;
+let selectedEventData = null;
+let gridData = {}; // {row_col: {tile_id, tile_name, items[]}}
+let editingCell = null;
+
+async function loadEvents() {
+  const res = await fetch('/api/admin/events');
+  const events = await res.json();
+  const el = document.getElementById('event-list');
+  if (!events.length) { el.textContent = 'No events yet.'; return; }
+  el.innerHTML = '';
+  events.forEach(ev => {
+    const div = document.createElement('div');
+    div.className = 'event-item' + (ev.id === selectedEventId ? ' selected' : '');
+    div.innerHTML = `
+      <div>
+        <div class="ev-name">${escHtml(ev.name)}</div>
+        <div class="ev-meta">Code word: <b>${escHtml(ev.code_word)}</b> &nbsp;|&nbsp; ${escHtml(ev.team1_name)} vs ${escHtml(ev.team2_name)}</div>
+      </div>
+      <span class="status-badge status-${ev.status}">${ev.status}</span>
+    `;
+    div.onclick = () => selectEvent(ev);
+    el.appendChild(div);
+  });
+}
+
+async function createEvent() {
+  const name = document.getElementById('ev-name').value.trim();
+  const code_word = document.getElementById('ev-codeword').value.trim();
+  const team1_name = document.getElementById('ev-t1').value.trim() || 'Team 1';
+  const team2_name = document.getElementById('ev-t2').value.trim() || 'Team 2';
+  if (!name || !code_word) { alert('Name and code word required.'); return; }
+  const res = await fetch('/api/admin/events', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({name, code_word, team1_name, team2_name})
+  });
+  const data = await res.json();
+  if (data.id) {
+    document.getElementById('create-status').textContent = `Event created (id ${data.id})`;
+    document.getElementById('ev-name').value = '';
+    document.getElementById('ev-codeword').value = '';
+    loadEvents();
+  }
+}
+
+async function selectEvent(ev) {
+  selectedEventId = ev.id;
+  selectedEventData = ev;
+  document.getElementById('board-event-name').textContent = ev.name;
+  document.getElementById('board-section').style.display = 'block';
+  document.getElementById('submissions-section').style.display = 'block';
+  document.querySelectorAll('.event-item').forEach(el => el.classList.remove('selected'));
+  event.currentTarget && event.currentTarget.classList.add('selected');
+  await loadBoardData();
+  initGrid();
+  loadSubmissions();
+  loadEvents();
+}
+
+async function loadBoardData() {
+  const res = await fetch(`/api/events/${selectedEventId}/tiles`);
+  const tiles = await res.json();
+  gridData = {};
+  tiles.forEach(t => { gridData[`${t.row}_${t.col}`] = t; });
+}
+
+function initGrid() {
+  const rows = parseInt(document.getElementById('grid-rows').value);
+  const cols = parseInt(document.getElementById('grid-cols').value);
+  const grid = document.getElementById('board-grid');
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  grid.innerHTML = '';
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const key = `${r}_${c}`;
+      const tile = gridData[key];
+      const cell = document.createElement('div');
+      cell.className = 'grid-cell' + (tile ? ' filled' : '');
+      cell.innerHTML = tile
+        ? `<div class="cell-name">${escHtml(tile.tile_name)}</div><div class="cell-items">${tile.items.map(i=>escHtml(i.item_name)).join(', ')}</div>`
+        : `<div style="color:#444;font-size:1.2rem;">+</div><div style="color:#444;font-size:0.65rem;">${r},${c}</div>`;
+      cell.onclick = () => openTileModal(r, c, tile);
+      grid.appendChild(cell);
+    }
+  }
+}
+
+function openTileModal(row, col, tile) {
+  editingCell = { row, col, tile };
+  document.getElementById('modal-pos').textContent = `row ${row}, col ${col}`;
+  document.getElementById('modal-tile-name').value = tile ? tile.tile_name : '';
+  document.getElementById('modal-delete-btn').style.display = tile ? 'block' : 'none';
+
+  const itemsList = document.getElementById('modal-items');
+  itemsList.innerHTML = '';
+  const items = tile ? tile.items : [{ item_name: '' }];
+  items.forEach(item => addItemRow(item.item_name));
+  if (!tile) addItemRow('');
+
+  document.getElementById('tile-modal').classList.add('open');
+}
+
+function addItemRow(value = '') {
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  row.innerHTML = `<input type="text" placeholder="Item name" value="${escHtml(value)}"><button class="btn btn-gray" onclick="this.parentElement.remove()" style="padding:4px 8px;">✕</button>`;
+  document.getElementById('modal-items').appendChild(row);
+}
+
+function closeTileModal() { document.getElementById('tile-modal').classList.remove('open'); }
+
+async function saveTile() {
+  const { row, col } = editingCell;
+  const tileName = document.getElementById('modal-tile-name').value.trim();
+  const items = Array.from(document.querySelectorAll('#modal-items .item-row input'))
+    .map(i => i.value.trim()).filter(Boolean);
+  if (!tileName) { alert('Tile name required.'); return; }
+  if (!items.length) { alert('At least one item required.'); return; }
+
+  await fetch(`/api/admin/events/${selectedEventId}/tiles`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ row, col, tile_name: tileName, items })
+  });
+  closeTileModal();
+  await loadBoardData();
+  initGrid();
+}
+
+async function deleteTile() {
+  if (!editingCell.tile) return;
+  if (!confirm('Delete this tile and all its items?')) return;
+  await fetch(`/api/admin/events/${selectedEventId}/tiles/${editingCell.tile.id}`, { method: 'DELETE' });
+  closeTileModal();
+  await loadBoardData();
+  initGrid();
+}
+
+async function endEvent() {
+  if (!confirm('End this event?')) return;
+  await fetch(`/api/admin/events/${selectedEventId}`, {
+    method: 'PATCH', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ status: 'ended' })
+  });
+  loadEvents();
+}
+
+async function activateEvent() {
+  await fetch(`/api/admin/events/${selectedEventId}`, {
+    method: 'PATCH', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ status: 'active' })
+  });
+  loadEvents();
+}
+
+async function loadSubmissions() {
+  const res = await fetch(`/api/admin/events/${selectedEventId}/submissions`);
+  const subs = await res.json();
+  const el = document.getElementById('submissions-content');
+  if (!subs.length) { el.textContent = 'No submissions yet.'; return; }
+  el.innerHTML = `
+    <table class="submissions-table">
+      <thead><tr><th>Player</th><th>Team</th><th>Tile</th><th>Item</th><th>Screenshot</th><th>Status</th><th>Time</th></tr></thead>
+      <tbody>${subs.map(s => `
+        <tr>
+          <td>${escHtml(s.player_name)}</td>
+          <td>Team ${s.team}</td>
+          <td>${escHtml(s.tile_name)}</td>
+          <td>${escHtml(s.item_name)}</td>
+          <td><img src="/${escHtml(s.screenshot_path)}" onclick="previewImg(this.src)" alt="screenshot"></td>
+          <td><span class="sub-status sub-${s.status}">${s.status}</span></td>
+          <td>${new Date(s.created_at + 'Z').toLocaleString()}</td>
+        </tr>
+      `).join('')}</tbody>
+    </table>
+  `;
+}
+
+function previewImg(src) {
+  document.getElementById('img-preview').src = src;
+  document.getElementById('img-preview-modal').classList.add('open');
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+loadEvents();
+</script>
+</body>
+</html>
