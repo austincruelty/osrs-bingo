@@ -4,6 +4,16 @@ const { db } = require('../database');
 module.exports = function makeAdminRouter(broadcast) {
   const router = express.Router();
 
+  // All admin API routes require the correct password in the header
+  router.use((req, res, next) => {
+    const password = process.env.ADMIN_PASSWORD;
+    if (!password) return next(); // no password set — open in dev
+    if (req.headers['x-admin-password'] !== password) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    next();
+  });
+
   router.get('/events', (req, res) => {
     res.json(db.all('SELECT * FROM events ORDER BY created_at DESC'));
   });

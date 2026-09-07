@@ -205,6 +205,18 @@
 
 </div>
 
+<!-- Login overlay -->
+<div id="login-overlay" style="display:none;position:fixed;inset:0;background:#0d0f1aee;backdrop-filter:blur(6px);z-index:500;align-items:center;justify-content:center;">
+  <div style="background:#111827;border:1px solid #2a3a54;border-top:2px solid #c89b3c;border-radius:10px;padding:32px;width:90%;max-width:360px;text-align:center;">
+    <div style="font-size:2rem;margin-bottom:8px;">⚔️</div>
+    <h2 style="color:#c89b3c;font-size:1.1rem;margin-bottom:6px;">Admin Access</h2>
+    <p style="color:#556;font-size:0.8rem;margin-bottom:20px;">Enter the admin password to continue.</p>
+    <input type="password" id="login-password" placeholder="Password" style="width:100%;background:#0f1e3a;color:#e0d5b7;border:1px solid #2a3a54;border-radius:4px;padding:10px;font-size:1rem;margin-bottom:10px;" onkeydown="if(event.key==='Enter')doLogin()">
+    <div id="login-error" style="color:#e05050;font-size:0.8rem;min-height:1.2em;margin-bottom:10px;"></div>
+    <button onclick="doLogin()" style="width:100%;background:#c89b3c;color:#0d0f1a;font-weight:bold;border:none;padding:10px;border-radius:4px;cursor:pointer;font-size:0.95rem;">Enter</button>
+  </div>
+</div>
+
 <!-- Tile Editor Modal -->
 <div class="tile-editor-modal" id="tile-modal">
   <div class="modal-box">
@@ -236,12 +248,49 @@ let selectedEventId = null;
 let selectedEventData = null;
 let gridData = {};
 let editingCell = null;
+let adminPassword = localStorage.getItem('adminPassword') || '';
+
+// ── Auth ─────────────────────────────────────────────────
+
+function adminFetch(url, opts = {}) {
+  opts.headers = { ...(opts.headers || {}), 'x-admin-password': adminPassword };
+  return fetch(url, opts);
+}
+
+async function checkAuth() {
+  const res = await fetch('/api/admin/events', { headers: { 'x-admin-password': adminPassword } });
+  if (res.status === 401) {
+    showLogin();
+    return false;
+  }
+  return true;
+}
+
+function showLogin() {
+  document.getElementById('login-overlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('login-password').focus(), 50);
+}
+
+async function doLogin() {
+  const pw = document.getElementById('login-password').value;
+  const res = await fetch('/api/admin/events', { headers: { 'x-admin-password': pw } });
+  if (res.status === 401) {
+    document.getElementById('login-error').textContent = 'Incorrect password.';
+    return;
+  }
+  adminPassword = pw;
+  localStorage.setItem('adminPassword', pw);
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-error').textContent = '';
+  loadEvents();
+}
 
 // ── Events ──────────────────────────────────────────────
 
 async function loadEvents() {
   try {
-    const res = await fetch('/api/admin/events');
+    const res = await adminFetch('/api/admin/events');
     const events = await res.json();
     const el = document.getElementById('event-list');
     if (!events.length) { el.textContent = 'No events yet.'; return; }
@@ -275,7 +324,7 @@ async function submitNewEvent() {
   }
   statusEl.style.color = '#888'; statusEl.textContent = 'Creating...';
   try {
-    const res = await fetch('/api/admin/events', {
+    const res = await adminFetch('/api/admin/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, code_word, team1_name, team2_name })
@@ -335,7 +384,7 @@ async function saveEventEdits() {
   const team2_name = document.getElementById('edit-t2').value.trim();
   if (!name || !code_word) { statusEl.className = 'error-notice'; statusEl.textContent = 'Name and code word required.'; return; }
   try {
-    await fetch(`/api/admin/events/${selectedEventId}`, {
+    await adminFetch(`/api/admin/events/${selectedEventId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, code_word, team1_name, team2_name })
@@ -354,7 +403,7 @@ async function saveEventEdits() {
 }
 
 async function activateEvent() {
-  await fetch(`/api/admin/events/${selectedEventId}`, {
+  await adminFetch(`/api/admin/events/${selectedEventId}`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'active' })
   });
   loadEvents();
@@ -362,7 +411,7 @@ async function activateEvent() {
 
 async function endEvent() {
   if (!confirm('End this event?')) return;
-  await fetch(`/api/admin/events/${selectedEventId}`, {
+  await adminFetch(`/api/admin/events/${selectedEventId}`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'ended' })
   });
   loadEvents();
@@ -372,7 +421,7 @@ async function endEvent() {
 
 async function loadMembers() {
   try {
-    const res = await fetch(`/api/admin/events/${selectedEventId}/members`);
+    const res = await adminFetch(`/api/admin/events/${selectedEventId}/members`);
     const members = await res.json();
     const t1 = members.filter(m => m.team === 1);
     const t2 = members.filter(m => m.team === 2);
@@ -396,7 +445,7 @@ async function addMember(team) {
   const inputId = team === 1 ? 'add-t1-name' : 'add-t2-name';
   const name = document.getElementById(inputId).value.trim();
   if (!name) return;
-  const res = await fetch(`/api/admin/events/${selectedEventId}/members`, {
+  const res = await adminFetch(`/api/admin/events/${selectedEventId}/members`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ player_name: name, team })
@@ -411,7 +460,7 @@ async function addMember(team) {
 }
 
 async function removeMember(memberId) {
-  await fetch(`/api/admin/events/${selectedEventId}/members/${memberId}`, { method: 'DELETE' });
+  await adminFetch(`/api/admin/events/${selectedEventId}/members/${memberId}`, { method: 'DELETE' });
   loadMembers();
 }
 
@@ -480,7 +529,7 @@ async function saveTile() {
   if (!tileName) { alert('Tile name required.'); return; }
   if (!items.length) { alert('At least one item required.'); return; }
   try {
-    const res = await fetch(`/api/admin/events/${selectedEventId}/tiles`, {
+    const res = await adminFetch(`/api/admin/events/${selectedEventId}/tiles`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ row, col, tile_name: tileName, items })
@@ -498,7 +547,7 @@ async function saveTile() {
 async function deleteTile() {
   if (!editingCell.tile) return;
   if (!confirm('Delete this tile?')) return;
-  await fetch(`/api/admin/events/${selectedEventId}/tiles/${editingCell.tile.id}`, { method: 'DELETE' });
+  await adminFetch(`/api/admin/events/${selectedEventId}/tiles/${editingCell.tile.id}`, { method: 'DELETE' });
   closeTileModal();
   await loadBoardData();
   initGrid();
@@ -508,7 +557,7 @@ async function deleteTile() {
 
 async function loadSubmissions() {
   try {
-    const res = await fetch(`/api/admin/events/${selectedEventId}/submissions`);
+    const res = await adminFetch(`/api/admin/events/${selectedEventId}/submissions`);
     const subs = await res.json();
     const el = document.getElementById('submissions-content');
     if (!subs.length) { el.textContent = 'No submissions yet.'; return; }
@@ -539,7 +588,7 @@ function escHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-loadEvents();
+checkAuth().then(ok => { if (ok) loadEvents(); });
 </script>
 </body>
 </html>
