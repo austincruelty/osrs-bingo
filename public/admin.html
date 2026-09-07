@@ -507,32 +507,35 @@ function openTileModal(row, col, tile) {
   const itemsList = document.getElementById('modal-items');
   itemsList.innerHTML = '';
   const items = tile?.items?.length ? tile.items : [];
-  if (items.length) items.forEach(item => addItemRow(item.item_name));
+  if (items.length) items.forEach(item => addItemRow(item.item_name, item.quantity || 1));
   else addItemRow('');
   document.getElementById('tile-modal').classList.add('open');
 }
 
 function itemSpriteUrl(name) {
-  const wikiName = name.trim().charAt(0).toUpperCase() + name.trim().slice(1).replace(/ /g, '_');
+  // Strip quantity suffixes like "x5" or "5x" before building wiki URL
+  const clean = name.trim().replace(/\s+x\d+$/i, '').replace(/^\d+x\s+/i, '').trim();
+  const wikiName = clean.charAt(0).toUpperCase() + clean.slice(1).replace(/ /g, '_');
   return `https://oldschool.runescape.wiki/images/${encodeURIComponent(wikiName)}.png`;
 }
 
-function addItemRow(value = '') {
+function addItemRow(value = '', qty = 1) {
   const row = document.createElement('div');
   row.className = 'item-row';
   row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px;';
   const spriteUrl = value ? itemSpriteUrl(value) : '';
   row.innerHTML = `
     <img src="${escHtml(spriteUrl)}" style="width:24px;height:24px;object-fit:contain;image-rendering:pixelated;flex-shrink:0;${value ? '' : 'display:none'}" onerror="this.style.display='none'" alt="">
-    <input type="text" placeholder="Item name" value="${escHtml(value)}" style="flex:1;">
+    <input type="text" class="item-name-input" placeholder="Item name" value="${escHtml(value)}" style="flex:1;">
+    <input type="number" class="item-qty-input" min="1" max="99" value="${parseInt(qty)||1}" title="Required quantity" style="width:52px;text-align:center;">
     <button class="btn btn-gray" onclick="this.parentElement.remove()" style="padding:4px 8px;flex-shrink:0;">✕</button>`;
   const img = row.querySelector('img');
-  const input = row.querySelector('input');
+  const nameInput = row.querySelector('.item-name-input');
   let debounce;
-  input.addEventListener('input', () => {
+  nameInput.addEventListener('input', () => {
     clearTimeout(debounce);
     debounce = setTimeout(() => {
-      const name = input.value.trim();
+      const name = nameInput.value.trim();
       if (name) { img.src = itemSpriteUrl(name); img.style.display = ''; }
       else img.style.display = 'none';
     }, 400);
@@ -545,8 +548,12 @@ function closeTileModal() { document.getElementById('tile-modal').classList.remo
 async function saveTile() {
   const { row, col } = editingCell;
   const tileName = document.getElementById('modal-tile-name').value.trim();
-  const items = Array.from(document.querySelectorAll('#modal-items .item-row input'))
-    .map(i => i.value.trim()).filter(Boolean);
+  const items = Array.from(document.querySelectorAll('#modal-items .item-row'))
+    .map(row => ({
+      name: row.querySelector('.item-name-input').value.trim(),
+      qty: parseInt(row.querySelector('.item-qty-input').value) || 1
+    }))
+    .filter(i => i.name);
   if (!tileName) { alert('Tile name required.'); return; }
   if (!items.length) { alert('At least one item required.'); return; }
   try {

@@ -57,7 +57,9 @@ module.exports = function makeAdminRouter(broadcast) {
         [eventId, row, col, tile_name]
       );
       for (const item of items) {
-        if (item.trim()) db.run('INSERT INTO tile_items (tile_id, item_name) VALUES (?, ?)', [tileId, item.trim()]);
+        const name = (typeof item === 'string' ? item : item.name || '').trim();
+        const qty = Math.max(1, parseInt((typeof item === 'object' && item.qty) || 1) || 1);
+        if (name) db.run('INSERT INTO tile_items (tile_id, item_name, quantity) VALUES (?, ?, ?)', [tileId, name, qty]);
       }
       return tileId;
     });

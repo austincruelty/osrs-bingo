@@ -102,8 +102,11 @@ async function init() {
   _db.run(`CREATE TABLE IF NOT EXISTS tile_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tile_id INTEGER NOT NULL REFERENCES tiles(id),
-    item_name TEXT NOT NULL
+    item_name TEXT NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1
   )`);
+  // Migration: add quantity column to existing databases
+  try { _db.run('ALTER TABLE tile_items ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1'); } catch {}
 
   _db.run(`CREATE TABLE IF NOT EXISTS submissions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

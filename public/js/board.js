@@ -153,25 +153,37 @@ function renderBoard(data) {
       el.innerHTML = `<div class="tile-header">${headerSprite}<span class="tile-name">${escHtml(tile.tile_name)}</span></div>` +
         tile.items.map(item => {
           const stars = '★'.repeat(item.points || 1);
+          const qty = item.quantity || 1;
+          const t1c = item.team1_count || 0;
+          const t2c = item.team2_count || 0;
           const t1done = item.team1_done;
           const t2done = item.team2_done;
 
-          let dot1 = '', dot2 = '';
-          if (selectedTeam === null) {
-            dot1 = `<span class="dot${t1done ? ' t1-done' : ''}"></span>`;
-            dot2 = `<span class="dot${t2done ? ' t2-done' : ''}"></span>`;
-          } else if (selectedTeam === 1) {
-            dot1 = `<span class="dot${t1done ? ' t1-done' : ''}"></span>`;
+          // For qty > 1 show "N/total" counts; for qty=1 show dots
+          let progress1 = '', progress2 = '';
+          if (qty > 1) {
+            if (selectedTeam === null || selectedTeam === 1)
+              progress1 = `<span class="qty-progress t1-prog${t1done ? ' done' : ''}">${t1c}/${qty}</span>`;
+            if (selectedTeam === null || selectedTeam === 2)
+              progress2 = `<span class="qty-progress t2-prog${t2done ? ' done' : ''}">${t2c}/${qty}</span>`;
           } else {
-            dot2 = `<span class="dot${t2done ? ' t2-done' : ''}"></span>`;
+            if (selectedTeam === null) {
+              progress1 = `<span class="dot${t1done ? ' t1-done' : ''}"></span>`;
+              progress2 = `<span class="dot${t2done ? ' t2-done' : ''}"></span>`;
+            } else if (selectedTeam === 1) {
+              progress1 = `<span class="dot${t1done ? ' t1-done' : ''}"></span>`;
+            } else {
+              progress2 = `<span class="dot${t2done ? ' t2-done' : ''}"></span>`;
+            }
           }
 
+          const isDone = (selectedTeam === 1 && t1done) || (selectedTeam === 2 && t2done);
           return `
-            <div class="tile-item${item.team1_done && selectedTeam === 1 ? ' item-done' : ''}${item.team2_done && selectedTeam === 2 ? ' item-done' : ''}">
+            <div class="tile-item${isDone ? ' item-done' : ''}">
               <img src="${itemSpriteUrl(item.item_name)}" class="item-sprite" onerror="this.style.display='none'" alt="">
               <span class="item-stars">${escHtml(stars)}</span>
               <span class="tile-item-name">${escHtml(item.item_name)}</span>
-              <span class="team-dots">${dot1}${dot2}</span>
+              <span class="team-dots">${progress1}${progress2}</span>
             </div>`;
         }).join('');
 
@@ -187,8 +199,9 @@ function escHtml(str) {
 }
 
 function itemSpriteUrl(itemName) {
-  // OSRS Wiki images follow "First_word_capitalized_rest_lowercase" with underscores
-  const wikiName = itemName.trim().charAt(0).toUpperCase() + itemName.trim().slice(1).replace(/ /g, '_');
+  // Strip quantity suffixes ("Dragon bones x5" → "Dragon bones") before wiki lookup
+  const clean = itemName.trim().replace(/\s+x\d+$/i, '').replace(/^\d+x\s+/i, '').trim();
+  const wikiName = clean.charAt(0).toUpperCase() + clean.slice(1).replace(/ /g, '_');
   return `https://oldschool.runescape.wiki/images/${encodeURIComponent(wikiName)}.png`;
 }
 

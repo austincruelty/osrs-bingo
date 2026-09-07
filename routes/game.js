@@ -67,9 +67,12 @@ function buildBoard(eventId) {
     const items = db.all('SELECT * FROM tile_items WHERE tile_id = ?', [tile.id]);
     const itemsWithProgress = items.map((item, idx) => {
       const points = Math.min(idx + 1, 3); // 1st=1pt, 2nd=2pt, 3rd=3pt
-      const t1 = db.get("SELECT id FROM submissions WHERE tile_item_id = ? AND team = 1 AND status = 'approved'", [item.id]);
-      const t2 = db.get("SELECT id FROM submissions WHERE tile_item_id = ? AND team = 2 AND status = 'approved'", [item.id]);
-      return { ...item, points, team1_done: !!t1, team2_done: !!t2 };
+      const qty = item.quantity || 1;
+      const t1row = db.get("SELECT COUNT(*) as c FROM submissions WHERE tile_item_id = ? AND team = 1 AND status = 'approved'", [item.id]);
+      const t2row = db.get("SELECT COUNT(*) as c FROM submissions WHERE tile_item_id = ? AND team = 2 AND status = 'approved'", [item.id]);
+      const t1count = t1row ? t1row.c : 0;
+      const t2count = t2row ? t2row.c : 0;
+      return { ...item, points, quantity: qty, team1_count: t1count, team2_count: t2count, team1_done: t1count >= qty, team2_done: t2count >= qty };
     });
     return {
       ...tile,
@@ -162,13 +165,16 @@ module.exports = function makeGameRouter(broadcast) {
       return res.status(400).json({ error: 'Invalid tile item for this event' });
     }
 
-    const alreadyApproved = db.get(
-      "SELECT id FROM submissions WHERE tile_item_id = ? AND team = ? AND status = 'approved'",
+    const approvedRow = db.get(
+      "SELECT COUNT(*) as c FROM submissions WHERE tile_item_id = ? AND team = ? AND status = 'approved'",
       [tile_item_id, teamNum]
     );
-    if (alreadyApproved) {
+    const approvedCount = approvedRow ? approvedRow.c : 0;
+    const requiredQty = tileItem.quantity || 1;
+    if (approvedCount >= requiredQty) {
       cleanup();
-      return res.status(400).json({ error: 'Your team already completed this item' });
+      const plural = requiredQty > 1 ? `all ${requiredQty} drops` : 'this item';
+      return res.status(400).json({ error: `Your team has already submitted ${plural} for this item` });
     }
 
     // Verify code word with Claude vision
