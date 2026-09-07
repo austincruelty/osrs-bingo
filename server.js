@@ -17,8 +17,9 @@ async function main() {
   const io = new Server(server);
 
   app.use(express.json());
+  const DATA_DIR = process.env.DATA_DIR || __dirname;
   app.use(express.static(path.join(__dirname, 'public')));
-  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+  app.use('/uploads', express.static(path.join(DATA_DIR, 'uploads')));
 
   const broadcast = (eventId) => io.to(`event-${eventId}`).emit('board-update', { eventId });
 

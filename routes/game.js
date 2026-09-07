@@ -7,8 +7,11 @@ const { db } = require('../database');
 
 const client = new Anthropic();
 
+const UPLOADS_DIR = path.join(process.env.DATA_DIR || path.join(__dirname, '..'), 'uploads');
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, '../uploads')),
+  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
@@ -164,7 +167,7 @@ module.exports = function makeGameRouter(broadcast) {
       return res.status(500).json({ error: 'Screenshot verification failed — please try again.' });
     }
 
-    const screenshotPath = path.relative(path.join(__dirname, '..'), req.file.path);
+    const screenshotPath = 'uploads/' + path.basename(req.file.path);
     const result = db.run(`
       INSERT INTO submissions (event_id, tile_id, tile_item_id, team, player_name, screenshot_path, status)
       VALUES (?, ?, ?, ?, ?, ?, 'approved')
