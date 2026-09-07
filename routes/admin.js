@@ -64,6 +64,30 @@ module.exports = function makeAdminRouter(broadcast) {
     res.json({ ok: true });
   });
 
+  // Team members (roster)
+  router.get('/events/:id/members', (req, res) => {
+    res.json(db.all('SELECT * FROM team_members WHERE event_id = ? ORDER BY team, player_name', [req.params.id]));
+  });
+
+  router.post('/events/:id/members', (req, res) => {
+    const { player_name, team } = req.body;
+    if (!player_name || !team) return res.status(400).json({ error: 'player_name and team required' });
+    try {
+      const result = db.run(
+        'INSERT INTO team_members (event_id, team, player_name) VALUES (?, ?, ?)',
+        [req.params.id, team, player_name.trim()]
+      );
+      res.json({ id: result.lastInsertRowid });
+    } catch (err) {
+      res.status(400).json({ error: 'Player already on a team for this event' });
+    }
+  });
+
+  router.delete('/events/:id/members/:memberId', (req, res) => {
+    db.run('DELETE FROM team_members WHERE id = ? AND event_id = ?', [req.params.memberId, req.params.id]);
+    res.json({ ok: true });
+  });
+
   router.get('/events/:id/submissions', (req, res) => {
     const subs = db.all(`
       SELECT s.*, t.tile_name, ti.item_name

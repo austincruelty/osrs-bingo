@@ -167,6 +167,8 @@
       background-clip: text;
     }
     .tiles-label { font-size: 0.8rem; color: #556; }
+    .team-roster { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+    .roster-pill { font-size: 0.7rem; background: #080c16; border: 1px solid #1e2a40; border-radius: 10px; padding: 2px 8px; color: #8899aa; }
 
     .bingo-badge {
       background: linear-gradient(135deg, #c89b3c, #e8c96a);
@@ -357,10 +359,12 @@
   <div class="team-card" id="team1-card">
     <h2 id="team1-name">Team 1</h2>
     <div><span class="tiles-done" id="team1-tiles">0</span> <span class="tiles-label">tiles</span></div>
+    <div class="team-roster" id="team1-roster"></div>
   </div>
   <div class="team-card" id="team2-card">
     <h2 id="team2-name">Team 2</h2>
     <div><span class="tiles-done" id="team2-tiles">0</span> <span class="tiles-label">tiles</span></div>
+    <div class="team-roster" id="team2-roster"></div>
   </div>
 </div>
 

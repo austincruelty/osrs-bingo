@@ -23,7 +23,6 @@ function persist() {
   }, 200);
 }
 
-// Thin wrapper so routes can use a better-sqlite3-like API
 const db = {
   exec(sql) {
     _db.run(sql);
@@ -34,7 +33,8 @@ const db = {
     const stmt = _db.prepare(sql);
     stmt.bind(params);
     let row = null;
-    if (stmt.step()) row = stmt.getAsObject({});
+    // Call getAsObject() with NO args to avoid re-binding which resets the statement
+    if (stmt.step()) row = stmt.getAsObject();
     stmt.free();
     return row;
   },
@@ -43,7 +43,8 @@ const db = {
     const stmt = _db.prepare(sql);
     stmt.bind(params);
     const rows = [];
-    while (stmt.step()) rows.push(stmt.getAsObject({}));
+    // Call getAsObject() with NO args — passing {} would re-bind and cause infinite loops
+    while (stmt.step()) rows.push(stmt.getAsObject());
     stmt.free();
     return rows;
   },
@@ -56,7 +57,6 @@ const db = {
     return { lastInsertRowid };
   },
 
-  // Simple transaction: runs fn(), rolls back on error
   transaction(fn) {
     return function(...args) {
       _db.run('BEGIN');
@@ -78,7 +78,6 @@ async function init() {
   const fileBuffer = fs.existsSync(DB_PATH) ? fs.readFileSync(DB_PATH) : null;
   _db = fileBuffer ? new SQL.Database(fileBuffer) : new SQL.Database();
 
-  _db.run('PRAGMA journal_mode = WAL');
   _db.run('PRAGMA foreign_keys = ON');
 
   _db.run(`CREATE TABLE IF NOT EXISTS events (
@@ -117,6 +116,14 @@ async function init() {
     status TEXT NOT NULL DEFAULT 'pending',
     rejection_reason TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+
+  _db.run(`CREATE TABLE IF NOT EXISTS team_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL REFERENCES events(id),
+    team INTEGER NOT NULL,
+    player_name TEXT NOT NULL,
+    UNIQUE(event_id, player_name)
   )`);
 
   return db;

@@ -78,11 +78,14 @@ function buildBoard(eventId) {
     };
   });
 
+  const members = db.all('SELECT * FROM team_members WHERE event_id = ? ORDER BY team, player_name', [eventId]);
+
   return {
     event,
     tiles: boardTiles,
     team1_bingo: checkBingo(boardTiles, 1),
-    team2_bingo: checkBingo(boardTiles, 2)
+    team2_bingo: checkBingo(boardTiles, 2),
+    members
   };
 }
 

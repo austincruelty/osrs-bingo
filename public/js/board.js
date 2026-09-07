@@ -64,6 +64,11 @@ function renderBoard(data) {
   document.getElementById('team1-tiles').textContent = t1Tiles;
   document.getElementById('team2-tiles').textContent = t2Tiles;
 
+  const t1Members = (data.members || []).filter(m => m.team === 1);
+  const t2Members = (data.members || []).filter(m => m.team === 2);
+  document.getElementById('team1-roster').innerHTML = t1Members.map(m => `<span class="roster-pill">${escHtml(m.player_name)}</span>`).join('');
+  document.getElementById('team2-roster').innerHTML = t2Members.map(m => `<span class="roster-pill">${escHtml(m.player_name)}</span>`).join('');
+
   const t1Card = document.getElementById('team1-card');
   const t2Card = document.getElementById('team2-card');
   t1Card.classList.toggle('bingo', team1_bingo);
