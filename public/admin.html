@@ -80,7 +80,7 @@
       <input type="text" id="ev-codeword" placeholder="Code word (e.g. dropthatitem)">
       <input type="text" id="ev-t1" placeholder="Team 1 name">
       <input type="text" id="ev-t2" placeholder="Team 2 name">
-      <button class="btn btn-gold" onclick="createEvent()">Create Event</button>
+      <button class="btn btn-gold" onclick="submitNewEvent()">Create Event</button>
     </div>
     <div id="create-status" style="font-size:0.8rem;color:#6bff9e;"></div>
   </section>
@@ -178,7 +178,7 @@ async function loadEvents() {
   });
 }
 
-async function createEvent() {
+async function submitNewEvent() {
   const name = document.getElementById('ev-name').value.trim();
   const code_word = document.getElementById('ev-codeword').value.trim();
   const team1_name = document.getElementById('ev-t1').value.trim() || 'Team 1';
