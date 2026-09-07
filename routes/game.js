@@ -7,7 +7,14 @@ const { db } = require('../database');
 
 const client = new Anthropic();
 
-const UPLOADS_DIR = path.join(process.env.DATA_DIR || path.join(__dirname, '..'), 'uploads');
+const DATA_DIR = (() => {
+  const preferred = process.env.DATA_DIR;
+  if (preferred) {
+    try { fs.mkdirSync(path.join(preferred, 'uploads'), { recursive: true }); return preferred; } catch {}
+  }
+  return path.join(__dirname, '..');
+})();
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const storage = multer.diskStorage({

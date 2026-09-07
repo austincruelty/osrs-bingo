@@ -2,7 +2,13 @@ const initSqlJs = require('sql.js');
 const path = require('path');
 const fs = require('fs');
 
-const DATA_DIR = process.env.DATA_DIR || __dirname;
+const DATA_DIR = (() => {
+  const preferred = process.env.DATA_DIR;
+  if (preferred) {
+    try { fs.accessSync(preferred, fs.constants.W_OK); return preferred; } catch {}
+  }
+  return __dirname;
+})();
 const DB_PATH = path.join(DATA_DIR, 'bingo.db');
 
 let _db = null;
