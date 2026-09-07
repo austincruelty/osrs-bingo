@@ -65,10 +65,11 @@ function buildBoard(eventId) {
 
   const boardTiles = tiles.map(tile => {
     const items = db.all('SELECT * FROM tile_items WHERE tile_id = ?', [tile.id]);
-    const itemsWithProgress = items.map(item => {
+    const itemsWithProgress = items.map((item, idx) => {
+      const points = Math.min(idx + 1, 3); // 1st=1pt, 2nd=2pt, 3rd=3pt
       const t1 = db.get("SELECT id FROM submissions WHERE tile_item_id = ? AND team = 1 AND status = 'approved'", [item.id]);
       const t2 = db.get("SELECT id FROM submissions WHERE tile_item_id = ? AND team = 2 AND status = 'approved'", [item.id]);
-      return { ...item, team1_done: !!t1, team2_done: !!t2 };
+      return { ...item, points, team1_done: !!t1, team2_done: !!t2 };
     });
     return {
       ...tile,
@@ -80,11 +81,21 @@ function buildBoard(eventId) {
 
   const members = db.all('SELECT * FROM team_members WHERE event_id = ? ORDER BY team, player_name', [eventId]);
 
+  let team1_points = 0, team2_points = 0;
+  boardTiles.forEach(tile => {
+    tile.items.forEach(item => {
+      if (item.team1_done) team1_points += item.points;
+      if (item.team2_done) team2_points += item.points;
+    });
+  });
+
   return {
     event,
     tiles: boardTiles,
     team1_bingo: checkBingo(boardTiles, 1),
     team2_bingo: checkBingo(boardTiles, 2),
+    team1_points,
+    team2_points,
     members
   };
 }

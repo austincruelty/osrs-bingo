@@ -131,8 +131,11 @@
       border: 1px solid #1e2a40;
       position: relative;
       overflow: hidden;
-      transition: border-color 0.3s;
+      transition: border-color 0.3s, box-shadow 0.3s, opacity 0.3s;
+      cursor: pointer;
+      user-select: none;
     }
+    .team-card:hover { border-color: #2a3a54; }
     .team-card::before {
       content: '';
       position: absolute;
@@ -144,6 +147,10 @@
     }
     .team-card.bingo { border-color: #c89b3c; animation: pulse 1.2s infinite; }
     .team-card.bingo::before { opacity: 1; background: linear-gradient(90deg, transparent, #c89b3c, transparent); }
+    .team-card.active-t1 { border-color: #4a7fc1; box-shadow: 0 0 20px #4a7fc133; }
+    .team-card.active-t2 { border-color: #c85a1a; box-shadow: 0 0 20px #c85a1a33; }
+    .team-card.dimmed { opacity: 0.4; }
+    .view-hint { font-size: 0.65rem; color: #445; margin-top: 2px; }
 
     @keyframes pulse {
       0%,100% { box-shadow: 0 0 10px #c89b3c44; }
@@ -167,6 +174,7 @@
       background-clip: text;
     }
     .tiles-label { font-size: 0.8rem; color: #556; }
+    .tiles-sub { font-size: 0.72rem; color: #445; margin-top: 2px; }
     .team-roster { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
     .roster-pill { font-size: 0.7rem; background: #080c16; border: 1px solid #1e2a40; border-radius: 10px; padding: 2px 8px; color: #8899aa; }
 
@@ -226,7 +234,10 @@
       gap: 4px;
       border: 1px solid #141c2e;
     }
+    .item-stars { color: #c89b3c; font-size: 0.6rem; margin-right: 3px; white-space: nowrap; flex-shrink: 0; }
     .tile-item-name { flex: 1; color: #b0a898; }
+    .tile-item.item-done .tile-item-name { color: #d4cbb8; }
+    .tile.other-team-faint { border-color: #1e2a40 !important; opacity: 0.85; }
     .team-dots { display: flex; gap: 3px; }
     .dot {
       width: 10px; height: 10px; border-radius: 50%;
@@ -356,14 +367,18 @@
 <div class="header-glow"></div>
 
 <div class="team-scoreboard" id="scoreboard" style="display:none">
-  <div class="team-card" id="team1-card">
+  <div class="team-card" id="team1-card" onclick="toggleTeamView(1)" title="Click to view this team's board">
     <h2 id="team1-name">Team 1</h2>
-    <div><span class="tiles-done" id="team1-tiles">0</span> <span class="tiles-label">tiles</span></div>
+    <div><span class="tiles-done" id="team1-pts">0</span> <span class="tiles-label">pts</span></div>
+    <div class="tiles-sub" id="team1-tiles-sub">0 tiles complete</div>
+    <div class="view-hint">Click to view board</div>
     <div class="team-roster" id="team1-roster"></div>
   </div>
-  <div class="team-card" id="team2-card">
+  <div class="team-card" id="team2-card" onclick="toggleTeamView(2)" title="Click to view this team's board">
     <h2 id="team2-name">Team 2</h2>
-    <div><span class="tiles-done" id="team2-tiles">0</span> <span class="tiles-label">tiles</span></div>
+    <div><span class="tiles-done" id="team2-pts">0</span> <span class="tiles-label">pts</span></div>
+    <div class="tiles-sub" id="team2-tiles-sub">0 tiles complete</div>
+    <div class="view-hint">Click to view board</div>
     <div class="team-roster" id="team2-roster"></div>
   </div>
 </div>
@@ -373,6 +388,10 @@
   <div class="legend-item"><div class="legend-dot" style="background:#c85a1a;box-shadow:0 0 4px #c85a1a"></div> <span id="legend-t2">Team 2 done</span></div>
 </div>
 
+<div id="team-view-bar" style="display:none;padding:8px 24px;background:#0a0f1e;border-bottom:1px solid #1e2a40;font-size:0.82rem;display:none;align-items:center;gap:12px;">
+  <span id="team-view-label" style="color:#9ab8d8;font-weight:bold;"></span>
+  <button onclick="toggleTeamView(null)" style="background:#1e2a40;border:1px solid #2a3a54;color:#9ab8d8;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:0.75rem;">✕ Both Teams</button>
+</div>
 <div id="status-bar">Select an event to view the board.</div>
 <div class="board-wrapper"><div class="board" id="board"></div></div>
 
