@@ -512,10 +512,31 @@ function openTileModal(row, col, tile) {
   document.getElementById('tile-modal').classList.add('open');
 }
 
+function itemSpriteUrl(name) {
+  const wikiName = name.trim().charAt(0).toUpperCase() + name.trim().slice(1).replace(/ /g, '_');
+  return `https://oldschool.runescape.wiki/images/${encodeURIComponent(wikiName)}.png`;
+}
+
 function addItemRow(value = '') {
   const row = document.createElement('div');
   row.className = 'item-row';
-  row.innerHTML = `<input type="text" placeholder="Item name" value="${escHtml(value)}"><button class="btn btn-gray" onclick="this.parentElement.remove()" style="padding:4px 8px;flex-shrink:0;">✕</button>`;
+  row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px;';
+  const spriteUrl = value ? itemSpriteUrl(value) : '';
+  row.innerHTML = `
+    <img src="${escHtml(spriteUrl)}" style="width:24px;height:24px;object-fit:contain;image-rendering:pixelated;flex-shrink:0;${value ? '' : 'display:none'}" onerror="this.style.display='none'" alt="">
+    <input type="text" placeholder="Item name" value="${escHtml(value)}" style="flex:1;">
+    <button class="btn btn-gray" onclick="this.parentElement.remove()" style="padding:4px 8px;flex-shrink:0;">✕</button>`;
+  const img = row.querySelector('img');
+  const input = row.querySelector('input');
+  let debounce;
+  input.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => {
+      const name = input.value.trim();
+      if (name) { img.src = itemSpriteUrl(name); img.style.display = ''; }
+      else img.style.display = 'none';
+    }, 400);
+  });
   document.getElementById('modal-items').appendChild(row);
 }
 

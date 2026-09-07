@@ -146,7 +146,11 @@ function renderBoard(data) {
         if (theirComplete) el.classList.add('other-team-faint');
       }
 
-      el.innerHTML = `<div class="tile-name">${escHtml(tile.tile_name)}</div>` +
+      const firstItem = tile.items[0];
+      const headerSprite = firstItem
+        ? `<img src="${itemSpriteUrl(firstItem.item_name)}" class="tile-header-sprite" onerror="this.style.display='none'" alt="">`
+        : '';
+      el.innerHTML = `<div class="tile-header">${headerSprite}<span class="tile-name">${escHtml(tile.tile_name)}</span></div>` +
         tile.items.map(item => {
           const stars = '★'.repeat(item.points || 1);
           const t1done = item.team1_done;
@@ -164,6 +168,7 @@ function renderBoard(data) {
 
           return `
             <div class="tile-item${item.team1_done && selectedTeam === 1 ? ' item-done' : ''}${item.team2_done && selectedTeam === 2 ? ' item-done' : ''}">
+              <img src="${itemSpriteUrl(item.item_name)}" class="item-sprite" onerror="this.style.display='none'" alt="">
               <span class="item-stars">${escHtml(stars)}</span>
               <span class="tile-item-name">${escHtml(item.item_name)}</span>
               <span class="team-dots">${dot1}${dot2}</span>
@@ -179,6 +184,12 @@ function renderBoard(data) {
 
 function escHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function itemSpriteUrl(itemName) {
+  // OSRS Wiki images follow "First_word_capitalized_rest_lowercase" with underscores
+  const wikiName = itemName.trim().charAt(0).toUpperCase() + itemName.trim().slice(1).replace(/ /g, '_');
+  return `https://oldschool.runescape.wiki/images/${encodeURIComponent(wikiName)}.png`;
 }
 
 // ── Submit modal ────────────────────────────────────────────

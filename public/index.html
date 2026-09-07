@@ -216,11 +216,9 @@
       font-size: 0.7rem;
       font-weight: 700;
       color: #c89b3c;
-      text-align: center;
-      border-bottom: 1px solid #1e2a40;
-      padding-bottom: 4px;
-      margin-bottom: 4px;
       letter-spacing: 0.03em;
+      flex: 1;
+      min-width: 0;
     }
 
     .tile-item {
@@ -234,8 +232,11 @@
       gap: 4px;
       border: 1px solid #141c2e;
     }
+    .item-sprite { width: 22px; height: 22px; object-fit: contain; image-rendering: pixelated; flex-shrink: 0; }
+    .tile-header { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid #1e2a40; padding-bottom: 5px; margin-bottom: 5px; }
+    .tile-header-sprite { width: 28px; height: 28px; object-fit: contain; image-rendering: pixelated; flex-shrink: 0; }
     .item-stars { color: #c89b3c; font-size: 0.6rem; margin-right: 3px; white-space: nowrap; flex-shrink: 0; }
-    .tile-item-name { flex: 1; color: #b0a898; }
+    .tile-item-name { flex: 1; color: #b0a898; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tile-item.item-done .tile-item-name { color: #d4cbb8; }
     .tile.other-team-faint { border-color: #1e2a40 !important; opacity: 0.85; }
     .team-dots { display: flex; gap: 3px; }
