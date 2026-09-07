@@ -3,55 +3,190 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OSRS Clan Bingo</title>
+  <title>Veritas Bingo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Segoe+UI&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      background: #1a1a2e;
-      color: #e0d5b7;
+      background: #0d0f1a;
+      color: #d4cbb8;
       font-family: 'Segoe UI', sans-serif;
       min-height: 100vh;
+      background-image: radial-gradient(ellipse at top, #1a2340 0%, #0d0f1a 70%);
     }
+
     header {
-      background: #16213e;
+      background: linear-gradient(180deg, #111827 0%, #0d1220 100%);
       border-bottom: 2px solid #c89b3c;
-      padding: 12px 24px;
+      box-shadow: 0 2px 20px #c89b3c33;
+      padding: 10px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 12px;
     }
-    header h1 { color: #c89b3c; font-size: 1.4rem; }
-    #event-select { background: #0f3460; color: #e0d5b7; border: 1px solid #c89b3c; padding: 6px 10px; border-radius: 4px; }
-    #submit-btn {
-      background: #c89b3c; color: #1a1a2e; font-weight: bold;
-      border: none; padding: 8px 18px; border-radius: 4px; cursor: pointer;
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
-    #submit-btn:hover { background: #e0b84a; }
-    .team-scoreboard {
-      display: flex; gap: 16px; padding: 12px 24px;
-      background: #16213e; border-bottom: 1px solid #333;
+
+    .brand img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 8px #4a7fc188);
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #c89b3c 0%, #e8c96a 50%, #c89b3c 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.05em;
+      line-height: 1.1;
+    }
+
+    .brand-sub {
+      font-size: 0.65rem;
+      color: #4a7fc1;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
       flex-wrap: wrap;
     }
+
+    #event-select {
+      background: #0f1e3a;
+      color: #d4cbb8;
+      border: 1px solid #4a7fc166;
+      padding: 7px 12px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    #event-select:focus { border-color: #c89b3c; }
+
+    #submit-btn {
+      background: linear-gradient(135deg, #c89b3c, #e0b84a);
+      color: #0d0f1a;
+      font-weight: bold;
+      font-family: 'Cinzel', serif;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 2px 10px #c89b3c44;
+      transition: box-shadow 0.2s, transform 0.1s;
+    }
+    #submit-btn:hover {
+      box-shadow: 0 4px 18px #c89b3c66;
+      transform: translateY(-1px);
+    }
+
+    .admin-link {
+      color: #4a7fc1;
+      font-size: 0.75rem;
+      text-decoration: none;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    .admin-link:hover { opacity: 1; }
+
+    /* Scoreboard */
+    .team-scoreboard {
+      display: flex;
+      gap: 16px;
+      padding: 14px 24px;
+      background: #0d1220;
+      border-bottom: 1px solid #1e2a40;
+      flex-wrap: wrap;
+    }
+
     .team-card {
-      flex: 1; min-width: 200px;
-      background: #0f3460; border-radius: 8px; padding: 12px 16px;
-      border: 2px solid transparent;
+      flex: 1;
+      min-width: 200px;
+      background: linear-gradient(135deg, #111827, #0f1e3a);
+      border-radius: 8px;
+      padding: 14px 18px;
+      border: 1px solid #1e2a40;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s;
     }
-    .team-card.bingo { border-color: #c89b3c; animation: pulse 1s infinite; }
-    @keyframes pulse { 0%,100% { box-shadow: 0 0 8px #c89b3c88; } 50% { box-shadow: 0 0 20px #c89b3c; } }
-    .team-card h2 { font-size: 1rem; margin-bottom: 4px; }
-    .team-card .tiles-done { font-size: 1.8rem; font-weight: bold; color: #c89b3c; }
-    .bingo-badge { background: #c89b3c; color: #1a1a2e; font-size: 0.8rem; font-weight: bold; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+    .team-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #4a7fc1, transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .team-card.bingo { border-color: #c89b3c; animation: pulse 1.2s infinite; }
+    .team-card.bingo::before { opacity: 1; background: linear-gradient(90deg, transparent, #c89b3c, transparent); }
+
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 10px #c89b3c44; }
+      50% { box-shadow: 0 0 24px #c89b3caa; }
+    }
+
+    .team-card h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 0.95rem;
+      color: #9ab8d8;
+      margin-bottom: 6px;
+      letter-spacing: 0.05em;
+    }
+    .team-card .tiles-done {
+      font-size: 2rem;
+      font-weight: bold;
+      font-family: 'Cinzel', serif;
+      background: linear-gradient(135deg, #c89b3c, #e8c96a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .tiles-label { font-size: 0.8rem; color: #556; }
+
+    .bingo-badge {
+      background: linear-gradient(135deg, #c89b3c, #e8c96a);
+      color: #0d0f1a;
+      font-size: 0.7rem;
+      font-weight: bold;
+      font-family: 'Cinzel', serif;
+      padding: 2px 10px;
+      border-radius: 10px;
+      margin-left: 8px;
+      letter-spacing: 0.1em;
+    }
+
+    /* Board */
     .board-wrapper { padding: 20px 24px; overflow-x: auto; }
-    .board {
-      display: grid;
-      gap: 6px;
-    }
+    .board { display: grid; gap: 6px; }
+
     .tile {
-      background: #16213e;
-      border: 2px solid #333;
+      background: linear-gradient(160deg, #111827, #0d1525);
+      border: 1px solid #1e2a40;
       border-radius: 6px;
       padding: 8px;
       min-height: 110px;
@@ -59,105 +194,179 @@
       flex-direction: column;
       gap: 4px;
       position: relative;
-      transition: border-color 0.3s;
+      transition: border-color 0.3s, box-shadow 0.3s;
     }
-    .tile.team1-complete { border-color: #4a9eff; }
-    .tile.team2-complete { border-color: #ff6b35; }
-    .tile.both-complete { border-color: #c89b3c; background: #1f1a0e; }
+    .tile:hover { border-color: #4a7fc133; }
+    .tile.team1-complete { border-color: #4a7fc1; box-shadow: 0 0 8px #4a7fc133; }
+    .tile.team2-complete { border-color: #c85a1a; box-shadow: 0 0 8px #c85a1a33; }
+    .tile.both-complete { border-color: #c89b3c; box-shadow: 0 0 12px #c89b3c44; background: linear-gradient(160deg, #1a1508, #150f02); }
+
     .tile-name {
-      font-size: 0.75rem;
-      font-weight: bold;
+      font-family: 'Cinzel', serif;
+      font-size: 0.7rem;
+      font-weight: 700;
       color: #c89b3c;
       text-align: center;
-      border-bottom: 1px solid #333;
+      border-bottom: 1px solid #1e2a40;
       padding-bottom: 4px;
       margin-bottom: 4px;
+      letter-spacing: 0.03em;
     }
+
     .tile-item {
       font-size: 0.7rem;
       padding: 3px 6px;
       border-radius: 3px;
-      background: #0a0a1a;
+      background: #080c16;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 4px;
+      border: 1px solid #141c2e;
     }
-    .tile-item-name { flex: 1; }
+    .tile-item-name { flex: 1; color: #b0a898; }
     .team-dots { display: flex; gap: 3px; }
     .dot {
       width: 10px; height: 10px; border-radius: 50%;
-      border: 1px solid #555;
-      background: #0a0a1a;
+      border: 1px solid #2a3550;
+      background: #080c16;
     }
-    .dot.t1-done { background: #4a9eff; border-color: #4a9eff; }
-    .dot.t2-done { background: #ff6b35; border-color: #ff6b35; }
-    .complete-overlay {
-      position: absolute; inset: 0;
-      border-radius: 4px;
-      pointer-events: none;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.5rem;
-    }
+    .dot.t1-done { background: #4a7fc1; border-color: #4a7fc1; box-shadow: 0 0 4px #4a7fc188; }
+    .dot.t2-done { background: #c85a1a; border-color: #c85a1a; box-shadow: 0 0 4px #c85a1a88; }
+
+    /* Legend */
     .legend {
-      display: flex; gap: 16px; padding: 8px 24px; font-size: 0.75rem; flex-wrap: wrap;
+      display: flex;
+      gap: 20px;
+      padding: 10px 24px;
+      font-size: 0.75rem;
+      flex-wrap: wrap;
+      border-bottom: 1px solid #1e2a40;
+      color: #667;
     }
-    .legend-item { display: flex; align-items: center; gap: 6px; }
-    .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
-    #status-bar { padding: 8px 24px; font-size: 0.8rem; color: #888; }
+    .legend-item { display: flex; align-items: center; gap: 7px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    #status-bar { padding: 8px 24px; font-size: 0.78rem; color: #445; font-style: italic; }
+
+    /* Modal */
     #upload-modal {
-      display: none; position: fixed; inset: 0;
-      background: #000a; z-index: 100;
-      align-items: center; justify-content: center;
+      display: none;
+      position: fixed; inset: 0;
+      background: #00000099;
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
     }
     #upload-modal.open { display: flex; }
+
     .modal-box {
-      background: #16213e; border: 2px solid #c89b3c;
-      border-radius: 10px; padding: 24px;
-      width: 90%; max-width: 480px;
+      background: linear-gradient(160deg, #111827, #0d1525);
+      border: 1px solid #4a7fc144;
+      border-top: 2px solid #c89b3c;
+      border-radius: 10px;
+      padding: 28px;
+      width: 90%;
+      max-width: 480px;
+      box-shadow: 0 20px 60px #00000088;
     }
-    .modal-box h2 { color: #c89b3c; margin-bottom: 16px; }
-    .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 0.85rem; margin-bottom: 4px; color: #aaa; }
+    .modal-box h2 {
+      font-family: 'Cinzel', serif;
+      color: #c89b3c;
+      margin-bottom: 20px;
+      font-size: 1.1rem;
+      letter-spacing: 0.05em;
+    }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.8rem; margin-bottom: 5px; color: #8899aa; letter-spacing: 0.05em; text-transform: uppercase; }
     .form-group input, .form-group select {
-      width: 100%; background: #0f3460; color: #e0d5b7;
-      border: 1px solid #444; border-radius: 4px; padding: 8px 10px;
+      width: 100%;
+      background: #080c16;
+      color: #d4cbb8;
+      border: 1px solid #1e2a40;
+      border-radius: 4px;
+      padding: 9px 12px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
     }
-    .form-group input[type=file] { padding: 6px; }
-    .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
-    .btn-primary { background: #c89b3c; color: #1a1a2e; font-weight: bold; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; flex: 1; }
-    .btn-secondary { background: #333; color: #e0d5b7; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+    .form-group input:focus, .form-group select:focus { border-color: #4a7fc1; }
+    .form-group input[type=file] { padding: 7px; }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-primary {
+      background: linear-gradient(135deg, #c89b3c, #e0b84a);
+      color: #0d0f1a;
+      font-weight: bold;
+      font-family: 'Cinzel', serif;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      flex: 1;
+      transition: box-shadow 0.2s;
+    }
+    .btn-primary:hover { box-shadow: 0 4px 16px #c89b3c55; }
+    .btn-secondary {
+      background: #1e2a40;
+      color: #9ab8d8;
+      border: 1px solid #2a3a54;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .btn-secondary:hover { background: #243050; }
+
     #upload-status { margin-top: 10px; font-size: 0.85rem; }
-    #upload-status.error { color: #ff6b6b; }
-    #upload-status.success { color: #6bff9e; }
-    select option { background: #0f3460; }
+    #upload-status.error { color: #e05050; }
+    #upload-status.success { color: #50c878; }
+
+    select option { background: #0f1e3a; }
+
+    /* Divider line under header */
+    .header-glow {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #4a7fc144, #c89b3c66, #4a7fc144, transparent);
+    }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>⚔️ OSRS Clan Bingo</h1>
-  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+  <div class="brand">
+    <img src="/veritas-logo.png" alt="Veritas" onerror="this.style.display='none'">
+    <div class="brand-text">
+      <span class="brand-title">Veritas Bingo</span>
+      <span class="brand-sub">Old School RuneScape</span>
+    </div>
+  </div>
+  <div class="header-controls">
     <select id="event-select"><option value="">Select Event...</option></select>
     <button id="submit-btn" onclick="openSubmitModal()">Submit Drop</button>
-    <a href="/admin.html" style="color:#888;font-size:0.8rem;">Admin</a>
+    <a href="/admin.html" class="admin-link">Admin</a>
   </div>
 </header>
+<div class="header-glow"></div>
 
 <div class="team-scoreboard" id="scoreboard" style="display:none">
   <div class="team-card" id="team1-card">
     <h2 id="team1-name">Team 1</h2>
-    <div><span class="tiles-done" id="team1-tiles">0</span> tiles</div>
+    <div><span class="tiles-done" id="team1-tiles">0</span> <span class="tiles-label">tiles</span></div>
   </div>
   <div class="team-card" id="team2-card">
     <h2 id="team2-name">Team 2</h2>
-    <div><span class="tiles-done" id="team2-tiles">0</span> tiles</div>
+    <div><span class="tiles-done" id="team2-tiles">0</span> <span class="tiles-label">tiles</span></div>
   </div>
 </div>
 
 <div class="legend">
-  <div class="legend-item"><div class="legend-dot" style="background:#4a9eff"></div> <span id="legend-t1">Team 1 done</span></div>
-  <div class="legend-item"><div class="legend-dot" style="background:#ff6b35"></div> <span id="legend-t2">Team 2 done</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#4a7fc1;box-shadow:0 0 4px #4a7fc1"></div> <span id="legend-t1">Team 1 done</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#c85a1a;box-shadow:0 0 4px #c85a1a"></div> <span id="legend-t2">Team 2 done</span></div>
 </div>
 
 <div id="status-bar">Select an event to view the board.</div>
@@ -168,7 +377,7 @@
   <div class="modal-box">
     <h2>Submit a Drop</h2>
     <div class="form-group">
-      <label>Your RSN (Runescape Name)</label>
+      <label>Your RSN</label>
       <input type="text" id="f-player" placeholder="YourName123" maxlength="12">
     </div>
     <div class="form-group">
@@ -186,7 +395,7 @@
       </select>
     </div>
     <div class="form-group">
-      <label>Item on this tile</label>
+      <label>Item</label>
       <select id="f-item">
         <option value="">Select item...</option>
       </select>
