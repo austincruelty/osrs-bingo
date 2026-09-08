@@ -267,6 +267,94 @@
 
     #status-bar { padding: 8px 24px; font-size: 0.78rem; color: #445; font-style: italic; }
 
+    /* Landing overlay */
+    #landing {
+      position: fixed;
+      inset: 0;
+      background: #0d0f1a;
+      background-image: radial-gradient(ellipse at center, #1a2340 0%, #0d0f1a 70%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+    }
+    #landing.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .landing-logo { width: 80px; height: 80px; object-fit: contain; filter: drop-shadow(0 0 20px #4a7fc166); margin-bottom: 16px; }
+    .landing-title {
+      font-family: 'Cinzel', serif;
+      font-size: 3rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #c89b3c 0%, #e8c96a 50%, #c89b3c 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.08em;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .landing-sub {
+      font-size: 0.7rem;
+      color: #4a7fc1;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      margin-bottom: 36px;
+    }
+    .landing-divider {
+      width: 280px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #c89b3c66, transparent);
+      margin-bottom: 28px;
+    }
+    .landing-prompt {
+      font-family: 'Cinzel', serif;
+      font-size: 0.75rem;
+      color: #556;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    #landing-events { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 380px; }
+    .landing-event-btn {
+      background: linear-gradient(135deg, #111827, #0f1e3a);
+      border: 1px solid #2a3a54;
+      border-radius: 8px;
+      padding: 16px 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.1s;
+      width: 100%;
+    }
+    .landing-event-btn:hover {
+      border-color: #c89b3c;
+      box-shadow: 0 0 20px #c89b3c22;
+      transform: translateY(-2px);
+    }
+    .landing-event-name {
+      font-family: 'Cinzel', serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #d4cbb8;
+    }
+    .landing-event-status {
+      font-size: 0.65rem;
+      padding: 3px 10px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .landing-event-status.active { background: #1e5a2a; color: #6bff9e; }
+    .landing-event-status.ended  { background: #2a2a2a; color: #666; }
+    .landing-no-events { color: #445; font-size: 0.9rem; font-style: italic; }
+    .landing-footer { margin-top: 32px; font-size: 0.7rem; color: #2a3a54; }
+
     /* Modal */
     #upload-modal {
       display: none;
@@ -405,6 +493,17 @@
     <pre id="rules-text" style="white-space:pre-wrap;font-family:'Segoe UI',sans-serif;font-size:0.85rem;line-height:1.7;color:#b0a898;max-width:860px;"></pre>
   </div>
 </div>
+<!-- Landing overlay -->
+<div id="landing">
+  <img class="landing-logo" src="/veritas-logo.png" alt="" onerror="this.style.display='none'">
+  <h1 class="landing-title">Veritas Bingo</h1>
+  <p class="landing-sub">Clan Bingo Event</p>
+  <div class="landing-divider"></div>
+  <p class="landing-prompt">Select an Event</p>
+  <div id="landing-events"><p class="landing-no-events">Loading events...</p></div>
+  <p class="landing-footer">Click an event to view its board</p>
+</div>
+
 <div id="status-bar">Select an event to view the board.</div>
 <div class="board-wrapper"><div class="board" id="board"></div></div>
 

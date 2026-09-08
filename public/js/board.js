@@ -11,12 +11,34 @@ const statusBar = document.getElementById('status-bar');
 async function loadEvents() {
   const res = await fetch('/api/events');
   const events = await res.json();
+  const landingContainer = document.getElementById('landing-events');
+  landingContainer.innerHTML = '';
+
+  if (!events.length) {
+    landingContainer.innerHTML = '<p class="landing-no-events">No events found.</p>';
+    return;
+  }
+
   events.forEach(ev => {
     const opt = document.createElement('option');
     opt.value = ev.id;
     opt.textContent = `${ev.name} (${ev.status})`;
     eventSelect.appendChild(opt);
+
+    const btn = document.createElement('button');
+    btn.className = 'landing-event-btn';
+    btn.innerHTML = `<span class="landing-event-name">${escHtml(ev.name)}</span><span class="landing-event-status ${ev.status}">${ev.status}</span>`;
+    btn.addEventListener('click', () => landingSelectEvent(String(ev.id)));
+    landingContainer.appendChild(btn);
   });
+}
+
+function landingSelectEvent(eventId) {
+  const landing = document.getElementById('landing');
+  landing.classList.add('hidden');
+  landing.addEventListener('transitionend', () => { landing.style.display = 'none'; }, { once: true });
+  eventSelect.value = eventId;
+  eventSelect.dispatchEvent(new Event('change'));
 }
 
 eventSelect.addEventListener('change', () => {
