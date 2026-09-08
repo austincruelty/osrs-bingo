@@ -2,7 +2,20 @@ const socket = io();
 let currentEventId = null;
 let currentBoard = null;
 let tilesData = [];
-let selectedTeam = null; // null = both teams, 1 = team1, 2 = team2
+let selectedTeam = null; // null = all teams, or a team_number integer
+
+const TEAM_COLORS = [
+  '#4a7fc1', // 1 — blue
+  '#c85a1a', // 2 — orange
+  '#3db560', // 3 — green
+  '#9b3dc8', // 4 — purple
+  '#c8b240', // 5 — gold
+  '#c83d6a', // 6 — crimson
+];
+
+function teamColor(teamNum) {
+  return TEAM_COLORS[(teamNum - 1) % TEAM_COLORS.length];
+}
 
 const eventSelect = document.getElementById('event-select');
 const boardEl = document.getElementById('board');
@@ -53,6 +66,8 @@ eventSelect.addEventListener('change', () => {
   } else {
     boardEl.innerHTML = '';
     document.getElementById('scoreboard').style.display = 'none';
+    const legend = document.getElementById('legend');
+    if (legend) legend.style.display = 'none';
     document.getElementById('team-view-bar').style.display = 'none';
     document.getElementById('feed-list').innerHTML = '<p class="feed-empty">Select an event to see drops.</p>';
   }
@@ -72,68 +87,72 @@ async function loadBoard() {
 
 // ── Team view toggle ────────────────────────────────────────
 
-function toggleTeamView(team) {
-  // Clicking the already-active team returns to both-teams view
-  selectedTeam = (selectedTeam === team) ? null : team;
+function toggleTeamView(teamNum) {
+  selectedTeam = (selectedTeam === teamNum) ? null : teamNum;
   if (currentBoard) renderBoard(currentBoard);
-}
-
-function updateTeamViewBar(data) {
-  const bar = document.getElementById('team-view-bar');
-  const label = document.getElementById('team-view-label');
-  if (selectedTeam === 1) {
-    bar.style.display = 'flex';
-    label.textContent = `Viewing ${data.event.team1_name}'s Board`;
-    label.style.color = '#4a7fc1';
-  } else if (selectedTeam === 2) {
-    bar.style.display = 'flex';
-    label.textContent = `Viewing ${data.event.team2_name}'s Board`;
-    label.style.color = '#c85a1a';
-  } else {
-    bar.style.display = 'none';
-  }
 }
 
 // ── Render ──────────────────────────────────────────────────
 
 function renderBoard(data) {
-  const { event, tiles, team1_bingo, team2_bingo, team1_points = 0, team2_points = 0, members = [] } = data;
+  const { event, tiles, teams = [], members = [] } = data;
 
   document.title = `${event.name} — Veritas Bingo`;
-  document.getElementById('team1-name').textContent = event.team1_name;
-  document.getElementById('team2-name').textContent = event.team2_name;
-  document.getElementById('legend-t1').textContent = `${event.team1_name} done`;
-  document.getElementById('legend-t2').textContent = `${event.team2_name} done`;
-  document.getElementById('f-team1-opt').textContent = event.team1_name;
-  document.getElementById('f-team2-opt').textContent = event.team2_name;
-  document.getElementById('scoreboard').style.display = 'flex';
 
-  const t1Tiles = tiles.filter(t => t.team1_complete).length;
-  const t2Tiles = tiles.filter(t => t.team2_complete).length;
+  // ── Scoreboard ──
+  const scoreboard = document.getElementById('scoreboard');
+  scoreboard.style.display = 'flex';
+  scoreboard.innerHTML = teams.map(team => {
+    const color = teamColor(team.team_number);
+    const isActive = selectedTeam === team.team_number;
+    const isDimmed = selectedTeam !== null && selectedTeam !== team.team_number;
+    const teamMembers = members.filter(m => m.team === team.team_number);
+    const borderStyle = isActive ? `border-color:${color};box-shadow:0 0 20px ${color}33;` : '';
+    const opacityStyle = isDimmed ? 'opacity:0.4;' : '';
+    const nameHtml = escHtml(team.team_name) + (team.bingo ? ' <span class="bingo-badge">BINGO!</span>' : '');
+    return `
+      <div class="team-card${team.bingo ? ' bingo' : ''}"
+           onclick="toggleTeamView(${team.team_number})"
+           title="Click to view this team's board"
+           style="${borderStyle}${opacityStyle}">
+        <h2 style="color:${color}bb;">${nameHtml}</h2>
+        <div><span class="tiles-done">${team.points}</span> <span class="tiles-label">pts</span></div>
+        <div class="tiles-sub">${team.tiles_complete} tile${team.tiles_complete !== 1 ? 's' : ''} complete</div>
+        <div class="view-hint">Click to view board</div>
+        <div class="team-roster">${teamMembers.map(m => `<span class="roster-pill">${escHtml(m.player_name)}</span>`).join('')}</div>
+      </div>`;
+  }).join('');
 
-  document.getElementById('team1-pts').textContent = team1_points;
-  document.getElementById('team2-pts').textContent = team2_points;
-  document.getElementById('team1-tiles-sub').textContent = `${t1Tiles} tile${t1Tiles !== 1 ? 's' : ''} complete`;
-  document.getElementById('team2-tiles-sub').textContent = `${t2Tiles} tile${t2Tiles !== 1 ? 's' : ''} complete`;
+  // ── Legend ──
+  const legend = document.getElementById('legend');
+  if (legend) {
+    legend.style.display = '';
+    document.getElementById('legend-items').innerHTML = teams.map(team => {
+      const color = teamColor(team.team_number);
+      return `<div class="legend-item"><div class="legend-dot" style="background:${color};box-shadow:0 0 4px ${color}"></div> <span>${escHtml(team.team_name)} done</span></div>`;
+    }).join('');
+  }
 
-  // Team card active states
-  const t1Card = document.getElementById('team1-card');
-  const t2Card = document.getElementById('team2-card');
-  t1Card.className = 'team-card' + (team1_bingo ? ' bingo' : '') + (selectedTeam === 1 ? ' active-t1' : selectedTeam === 2 ? ' dimmed' : '');
-  t2Card.className = 'team-card' + (team2_bingo ? ' bingo' : '') + (selectedTeam === 2 ? ' active-t2' : selectedTeam === 1 ? ' dimmed' : '');
+  // ── Team select in submit modal ──
+  const teamSelect = document.getElementById('f-team');
+  teamSelect.innerHTML = '<option value="">Select team...</option>' +
+    teams.map(t => `<option value="${t.team_number}">${escHtml(t.team_name)}</option>`).join('');
 
-  document.getElementById('team1-name').innerHTML = event.team1_name + (team1_bingo ? ' <span class="bingo-badge">BINGO!</span>' : '');
-  document.getElementById('team2-name').innerHTML = event.team2_name + (team2_bingo ? ' <span class="bingo-badge">BINGO!</span>' : '');
+  // ── Team-view bar ──
+  const bar = document.getElementById('team-view-bar');
+  const barLabel = document.getElementById('team-view-label');
+  if (selectedTeam !== null) {
+    const selTeam = teams.find(t => t.team_number === selectedTeam);
+    if (selTeam) {
+      bar.style.display = 'flex';
+      barLabel.textContent = `Viewing ${selTeam.team_name}'s Board`;
+      barLabel.style.color = teamColor(selTeam.team_number);
+    }
+  } else {
+    bar.style.display = 'none';
+  }
 
-  // Roster pills
-  const t1Members = members.filter(m => m.team === 1);
-  const t2Members = members.filter(m => m.team === 2);
-  document.getElementById('team1-roster').innerHTML = t1Members.map(m => `<span class="roster-pill">${escHtml(m.player_name)}</span>`).join('');
-  document.getElementById('team2-roster').innerHTML = t2Members.map(m => `<span class="roster-pill">${escHtml(m.player_name)}</span>`).join('');
-
-  updateTeamViewBar(data);
-
-  // Grid setup
+  // ── Board grid ──
   let maxRow = 0, maxCol = 0;
   tiles.forEach(t => { if (t.row > maxRow) maxRow = t.row; if (t.col > maxCol) maxCol = t.col; });
   const cols = maxCol + 1;
@@ -143,6 +162,10 @@ function renderBoard(data) {
 
   const tileMap = {};
   tiles.forEach(t => { tileMap[`${t.row},${t.col}`] = t; });
+
+  const teamsToShow = selectedTeam !== null
+    ? teams.filter(t => t.team_number === selectedTeam)
+    : teams;
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -157,64 +180,61 @@ function renderBoard(data) {
         continue;
       }
 
-      if (selectedTeam === null) {
-        // Both-teams view: show both completion states
-        if (tile.team1_complete) el.classList.add('team1-complete');
-        if (tile.team2_complete) el.classList.add('team2-complete');
-        if (tile.team1_complete && tile.team2_complete) el.classList.add('both-complete');
-      } else {
-        // Single-team view
-        const myComplete = selectedTeam === 1 ? tile.team1_complete : tile.team2_complete;
-        const theirComplete = selectedTeam === 1 ? tile.team2_complete : tile.team1_complete;
-        if (myComplete) el.classList.add(selectedTeam === 1 ? 'team1-complete' : 'team2-complete');
-        if (theirComplete) el.classList.add('other-team-faint');
+      // Compute completed teams within current view
+      const completedInView = teamsToShow.filter(t => tile.complete && tile.complete[t.team_number]);
+      if (completedInView.length >= 2) {
+        el.style.borderColor = '#c89b3c';
+        el.style.boxShadow = '0 0 12px #c89b3c44';
+        el.style.background = 'linear-gradient(160deg, #1a1508, #150f02)';
+      } else if (completedInView.length === 1) {
+        const color = teamColor(completedInView[0].team_number);
+        el.style.borderColor = color;
+        el.style.boxShadow = `0 0 8px ${color}33`;
+      }
+
+      // In single-team view, dim tiles where another team is done but selected is not
+      if (selectedTeam !== null) {
+        const myDone = tile.complete && tile.complete[selectedTeam];
+        const anyOtherDone = teams.some(t => t.team_number !== selectedTeam && tile.complete && tile.complete[t.team_number]);
+        if (!myDone && anyOtherDone) el.style.opacity = '0.75';
       }
 
       const headerSprite = `<img src="${itemSpriteUrl(tile.tile_name)}" class="tile-header-sprite" onerror="this.style.display='none'" alt="">`;
-      el.innerHTML = `<div class="tile-header">${headerSprite}<span class="tile-name">${escHtml(tile.tile_name)}</span></div>` +
-        tile.items.map(item => {
-          const stars = '★'.repeat(item.points || 1);
-          const qty = item.quantity || 1;
-          const t1c = item.team1_count || 0;
-          const t2c = item.team2_count || 0;
-          const t1done = item.team1_done;
-          const t2done = item.team2_done;
 
-          // For qty > 1 show "N/total" counts; for qty=1 show dots
-          let progress1 = '', progress2 = '';
+      const itemsHtml = tile.items.map(item => {
+        const stars = '★'.repeat(item.points || 1);
+        const qty = item.quantity || 1;
+
+        let progressHtml = '';
+        for (const team of teamsToShow) {
+          const color = teamColor(team.team_number);
+          const cnt = (item.counts && item.counts[team.team_number]) || 0;
+          const isDone = item.done && item.done[team.team_number];
           if (qty > 1) {
-            if (selectedTeam === null || selectedTeam === 1)
-              progress1 = `<span class="qty-progress t1-prog${t1done ? ' done' : ''}">${t1c}/${qty}</span>`;
-            if (selectedTeam === null || selectedTeam === 2)
-              progress2 = `<span class="qty-progress t2-prog${t2done ? ' done' : ''}">${t2c}/${qty}</span>`;
+            progressHtml += `<span class="qty-progress" style="color:${color};border:1px solid ${color}55;${isDone ? 'opacity:0.5;' : ''}">${cnt}/${qty}</span>`;
           } else {
-            if (selectedTeam === null) {
-              progress1 = `<span class="dot${t1done ? ' t1-done' : ''}"></span>`;
-              progress2 = `<span class="dot${t2done ? ' t2-done' : ''}"></span>`;
-            } else if (selectedTeam === 1) {
-              progress1 = `<span class="dot${t1done ? ' t1-done' : ''}"></span>`;
-            } else {
-              progress2 = `<span class="dot${t2done ? ' t2-done' : ''}"></span>`;
-            }
+            progressHtml += `<span class="dot" style="${isDone ? `background:${color};border-color:${color};box-shadow:0 0 4px ${color}88` : ''}"></span>`;
           }
+        }
 
-          const isDone = (selectedTeam === 1 && t1done) || (selectedTeam === 2 && t2done);
-          return `
-            <div class="tile-item${isDone ? ' item-done' : ''}">
-              <img src="${itemSpriteUrl(item.item_name)}" class="item-sprite" onerror="this.style.display='none'" alt="">
-              <span class="item-stars">${escHtml(stars)}</span>
-              <span class="tile-item-name">${escHtml(item.item_name)}</span>
-              <span class="team-dots">${progress1}${progress2}</span>
-            </div>`;
-        }).join('');
+        const isDoneForSelected = selectedTeam !== null && item.done && item.done[selectedTeam];
+        return `
+          <div class="tile-item${isDoneForSelected ? ' item-done' : ''}">
+            <img src="${itemSpriteUrl(item.item_name)}" class="item-sprite" onerror="this.style.display='none'" alt="">
+            <span class="item-stars">${escHtml(stars)}</span>
+            <span class="tile-item-name">${escHtml(item.item_name)}</span>
+            <span class="team-dots">${progressHtml}</span>
+          </div>`;
+      }).join('');
 
+      el.innerHTML = `<div class="tile-header">${headerSprite}<span class="tile-name">${escHtml(tile.tile_name)}</span></div>` + itemsHtml;
       boardEl.appendChild(el);
     }
   }
 
   statusBar.textContent = `${event.name} · ${event.status} · ${tiles.length} tiles`;
 
-  // Rules section
+  // ── Rules section ──
   const rulesSection = document.getElementById('rules-section');
   const rulesText = document.getElementById('rules-text');
   if (event.rules && event.rules.trim()) {
@@ -234,12 +254,11 @@ function toggleRules() {
 }
 
 function escHtml(str) {
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function itemSpriteUrl(itemName) {
-  // Strip quantity suffixes ("Dragon bones x5" → "Dragon bones") before wiki lookup
-  const clean = itemName.trim().replace(/\s+x\d+$/i, '').replace(/^\d+x\s+/i, '').trim();
+  const clean = (itemName || '').trim().replace(/\s+x\d+$/i, '').replace(/^\d+x\s+/i, '').trim();
   const wikiName = clean.charAt(0).toUpperCase() + clean.slice(1).replace(/ /g, '_');
   return `https://oldschool.runescape.wiki/images/${encodeURIComponent(wikiName)}.png`;
 }
@@ -331,18 +350,21 @@ function rsnInput(query) {
   const q = query.trim().toLowerCase();
   if (!q || !currentBoard?.members?.length) { suggestionsEl.style.display = 'none'; return; }
 
-  const matches = currentBoard.members.filter(m =>
-    m.player_name.toLowerCase().startsWith(q)
-  );
+  const matches = currentBoard.members.filter(m => m.player_name.toLowerCase().startsWith(q));
   if (!matches.length) { suggestionsEl.style.display = 'none'; return; }
 
+  const teamMap = {};
+  (currentBoard?.teams || []).forEach(t => { teamMap[t.team_number] = t; });
+
   matches.forEach(m => {
-    const teamName = m.team === 1 ? currentBoard.event.team1_name : currentBoard.event.team2_name;
+    const team = teamMap[m.team];
+    const teamName = team ? team.team_name : `Team ${m.team}`;
+    const color = teamColor(m.team);
     const div = document.createElement('div');
     div.className = 'rsn-suggestion';
-    div.innerHTML = `<span class="rsn-suggestion-name">${escHtml(m.player_name)}</span><span class="rsn-suggestion-team rsn-t${m.team}">${escHtml(teamName)}</span>`;
+    div.innerHTML = `<span class="rsn-suggestion-name">${escHtml(m.player_name)}</span><span class="rsn-suggestion-team" style="background:${color}22;color:${color}">${escHtml(teamName)}</span>`;
     div.addEventListener('mousedown', e => {
-      e.preventDefault(); // keep focus so blur doesn't fire first
+      e.preventDefault();
       document.getElementById('f-player').value = m.player_name;
       document.getElementById('f-team').value = m.team;
       suggestionsEl.style.display = 'none';
@@ -353,7 +375,6 @@ function rsnInput(query) {
 }
 
 function rsnBlur() {
-  // small delay so mousedown on a suggestion fires before blur hides it
   setTimeout(() => {
     const el = document.getElementById('rsn-suggestions');
     if (el) el.style.display = 'none';
@@ -381,18 +402,19 @@ async function loadFeed() {
     list.innerHTML = '<p class="feed-empty">No approved drops yet.</p>';
     return;
   }
-  const t1name = currentBoard?.event?.team1_name || 'Team 1';
-  const t2name = currentBoard?.event?.team2_name || 'Team 2';
+  const teamMap = {};
+  (currentBoard?.teams || []).forEach(t => { teamMap[t.team_number] = t; });
   list.innerHTML = entries.map(e => {
-    const teamName = e.team === 1 ? t1name : t2name;
-    const teamClass = `feed-team-t${e.team}`;
+    const team = teamMap[e.team];
+    const teamName = team ? team.team_name : `Team ${e.team}`;
+    const color = teamColor(e.team);
     return `<div class="feed-entry">
       <div class="feed-item-row">
         <img src="${itemSpriteUrl(e.item_name)}" class="feed-sprite" onerror="this.style.display='none'" alt="">
         <span class="feed-item-name">${escHtml(e.item_name)}</span>
       </div>
       <div class="feed-meta">
-        <span class="${teamClass}">${escHtml(teamName)}</span>
+        <span style="color:${color};font-weight:600;">${escHtml(teamName)}</span>
         <span class="feed-player"> · ${escHtml(e.player_name)}</span>
       </div>
       <div class="feed-time">${timeAgo(e.created_at)}</div>
@@ -400,7 +422,6 @@ async function loadFeed() {
   }).join('');
 }
 
-// Refresh time-ago labels every minute without a full reload
 setInterval(() => { if (currentEventId) loadFeed(); }, 60000);
 
 loadEvents();

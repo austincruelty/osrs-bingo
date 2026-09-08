@@ -4,10 +4,9 @@ const { db } = require('../database');
 module.exports = function makeAdminRouter(broadcast) {
   const router = express.Router();
 
-  // All admin API routes require the correct password in the header
   router.use((req, res, next) => {
     const password = process.env.ADMIN_PASSWORD;
-    if (!password) return next(); // no password set — open in dev
+    if (!password) return next();
     if (req.headers['x-admin-password'] !== password) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -15,7 +14,11 @@ module.exports = function makeAdminRouter(broadcast) {
   });
 
   router.get('/events', (req, res) => {
-    res.json(db.all('SELECT * FROM events ORDER BY created_at DESC'));
+    const events = db.all('SELECT * FROM events ORDER BY created_at DESC');
+    res.json(events.map(ev => ({
+      ...ev,
+      teams: db.all('SELECT team_number, team_name FROM event_teams WHERE event_id = ? ORDER BY team_number', [ev.id])
+    })));
   });
 
   router.post('/events', (req, res) => {
@@ -25,22 +28,63 @@ module.exports = function makeAdminRouter(broadcast) {
       'INSERT INTO events (name, code_word, team1_name, team2_name) VALUES (?, ?, ?, ?)',
       [name, code_word, team1_name || 'Team 1', team2_name || 'Team 2']
     );
-    res.json({ id: result.lastInsertRowid });
+    const eventId = result.lastInsertRowid;
+    db.run('INSERT INTO event_teams (event_id, team_number, team_name) VALUES (?, 1, ?)', [eventId, team1_name || 'Team 1']);
+    db.run('INSERT INTO event_teams (event_id, team_number, team_name) VALUES (?, 2, ?)', [eventId, team2_name || 'Team 2']);
+    res.json({ id: eventId });
   });
 
   router.patch('/events/:id', (req, res) => {
-    const { status, code_word, team1_name, team2_name, name, rules } = req.body;
+    const { status, code_word, name, rules, teams } = req.body;
     const event = db.get('SELECT * FROM events WHERE id = ?', [req.params.id]);
     if (!event) return res.status(404).json({ error: 'Event not found' });
     if (name) db.run('UPDATE events SET name = ? WHERE id = ?', [name, req.params.id]);
     if (status) db.run('UPDATE events SET status = ? WHERE id = ?', [status, req.params.id]);
     if (code_word) db.run('UPDATE events SET code_word = ? WHERE id = ?', [code_word, req.params.id]);
-    if (team1_name) db.run('UPDATE events SET team1_name = ? WHERE id = ?', [team1_name, req.params.id]);
-    if (team2_name) db.run('UPDATE events SET team2_name = ? WHERE id = ?', [team2_name, req.params.id]);
     if (rules !== undefined) db.run('UPDATE events SET rules = ? WHERE id = ?', [rules || null, req.params.id]);
+    if (teams && Array.isArray(teams)) {
+      for (const t of teams) {
+        db.run('UPDATE event_teams SET team_name = ? WHERE event_id = ? AND team_number = ?',
+          [(t.team_name || '').trim() || `Team ${t.team_number}`, req.params.id, t.team_number]);
+      }
+    }
     broadcast(req.params.id);
     res.json({ ok: true });
   });
+
+  // ── Teams ────────────────────────────────────────────────
+
+  router.get('/events/:id/teams', (req, res) => {
+    res.json(db.all('SELECT * FROM event_teams WHERE event_id = ? ORDER BY team_number', [req.params.id]));
+  });
+
+  router.post('/events/:id/teams', (req, res) => {
+    const { team_name } = req.body;
+    const existing = db.all('SELECT team_number FROM event_teams WHERE event_id = ? ORDER BY team_number', [req.params.id]);
+    const nextNum = existing.length ? Math.max(...existing.map(t => t.team_number)) + 1 : 1;
+    const tname = (team_name || '').trim() || `Team ${nextNum}`;
+    try {
+      db.run('INSERT INTO event_teams (event_id, team_number, team_name) VALUES (?, ?, ?)', [req.params.id, nextNum, tname]);
+      broadcast(req.params.id);
+      res.json({ team_number: nextNum, team_name: tname });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  router.delete('/events/:id/teams/:teamNum', (req, res) => {
+    const teamNum = parseInt(req.params.teamNum);
+    const hasMembers = db.get('SELECT COUNT(*) as c FROM team_members WHERE event_id = ? AND team = ?', [req.params.id, teamNum]);
+    const hasSubs = db.get("SELECT COUNT(*) as c FROM submissions WHERE event_id = ? AND team = ? AND status != 'rejected'", [req.params.id, teamNum]);
+    if ((hasMembers?.c || 0) > 0 || (hasSubs?.c || 0) > 0) {
+      return res.status(400).json({ error: 'Cannot remove a team that has players or submissions' });
+    }
+    db.run('DELETE FROM event_teams WHERE event_id = ? AND team_number = ?', [req.params.id, teamNum]);
+    broadcast(req.params.id);
+    res.json({ ok: true });
+  });
+
+  // ── Tiles ────────────────────────────────────────────────
 
   router.post('/events/:id/tiles', (req, res) => {
     const { row, col, tile_name, items } = req.body;
@@ -78,7 +122,8 @@ module.exports = function makeAdminRouter(broadcast) {
     res.json({ ok: true });
   });
 
-  // Team members (roster)
+  // ── Roster ───────────────────────────────────────────────
+
   router.get('/events/:id/members', (req, res) => {
     res.json(db.all('SELECT * FROM team_members WHERE event_id = ? ORDER BY team, player_name', [req.params.id]));
   });
@@ -86,6 +131,8 @@ module.exports = function makeAdminRouter(broadcast) {
   router.post('/events/:id/members', (req, res) => {
     const { player_name, team } = req.body;
     if (!player_name || !team) return res.status(400).json({ error: 'player_name and team required' });
+    const validTeam = db.get('SELECT id FROM event_teams WHERE event_id = ? AND team_number = ?', [req.params.id, team]);
+    if (!validTeam) return res.status(400).json({ error: 'Invalid team number for this event' });
     try {
       const result = db.run(
         'INSERT INTO team_members (event_id, team, player_name) VALUES (?, ?, ?)',
@@ -102,12 +149,16 @@ module.exports = function makeAdminRouter(broadcast) {
     res.json({ ok: true });
   });
 
+  // ── Submissions ───────────────────────────────────────────
+
   router.get('/events/:id/submissions', (req, res) => {
     const subs = db.all(`
-      SELECT s.*, t.tile_name, ti.item_name
+      SELECT s.*, t.tile_name, ti.item_name,
+             et.team_name
       FROM submissions s
       JOIN tiles t ON t.id = s.tile_id
       JOIN tile_items ti ON ti.id = s.tile_item_id
+      LEFT JOIN event_teams et ON et.event_id = s.event_id AND et.team_number = s.team
       WHERE s.event_id = ?
       ORDER BY s.created_at DESC
     `, [req.params.id]);

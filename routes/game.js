@@ -34,12 +34,11 @@ const upload = multer({
   }
 });
 
-function checkBingo(tiles, team) {
-  const key = team === 1 ? 'team1_complete' : 'team2_complete';
+function checkBingo(tiles, teamNum) {
   const grid = {};
   let maxRow = 0, maxCol = 0;
   for (const t of tiles) {
-    grid[`${t.row},${t.col}`] = t[key];
+    grid[`${t.row},${t.col}`] = t.complete ? !!t.complete[teamNum] : false;
     if (t.row > maxRow) maxRow = t.row;
     if (t.col > maxCol) maxCol = t.col;
   }
@@ -61,56 +60,66 @@ function buildBoard(eventId) {
   const event = db.get('SELECT * FROM events WHERE id = ?', [eventId]);
   if (!event) return null;
 
+  const teams = db.all('SELECT * FROM event_teams WHERE event_id = ? ORDER BY team_number', [eventId]);
   const tiles = db.all('SELECT * FROM tiles WHERE event_id = ? ORDER BY row, col', [eventId]);
 
   const boardTiles = tiles.map(tile => {
     const items = db.all('SELECT * FROM tile_items WHERE tile_id = ?', [tile.id]);
     const itemsWithProgress = items.map((item, idx) => {
-      const points = Math.min(idx + 1, 3); // 1st=1pt, 2nd=2pt, 3rd=3pt
+      const points = Math.min(idx + 1, 3);
       const qty = item.quantity || 1;
-      const t1row = db.get("SELECT COUNT(*) as c FROM submissions WHERE tile_item_id = ? AND team = 1 AND status = 'approved'", [item.id]);
-      const t2row = db.get("SELECT COUNT(*) as c FROM submissions WHERE tile_item_id = ? AND team = 2 AND status = 'approved'", [item.id]);
-      const t1count = t1row ? t1row.c : 0;
-      const t2count = t2row ? t2row.c : 0;
-      return { ...item, points, quantity: qty, team1_count: t1count, team2_count: t2count, team1_done: t1count >= qty, team2_done: t2count >= qty };
+      const counts = {}, done = {};
+      for (const team of teams) {
+        const row = db.get(
+          "SELECT COUNT(*) as c FROM submissions WHERE tile_item_id = ? AND team = ? AND status = 'approved'",
+          [item.id, team.team_number]
+        );
+        const c = row ? row.c : 0;
+        counts[team.team_number] = c;
+        done[team.team_number] = c >= qty;
+      }
+      return { ...item, points, quantity: qty, counts, done };
     });
-    return {
-      ...tile,
-      items: itemsWithProgress,
-      team1_complete: itemsWithProgress.length > 0 && itemsWithProgress.every(i => i.team1_done),
-      team2_complete: itemsWithProgress.length > 0 && itemsWithProgress.every(i => i.team2_done)
-    };
+
+    const complete = {};
+    for (const team of teams) {
+      complete[team.team_number] = itemsWithProgress.length > 0 &&
+        itemsWithProgress.every(i => i.done[team.team_number]);
+    }
+
+    return { ...tile, items: itemsWithProgress, complete };
   });
 
   const members = db.all('SELECT * FROM team_members WHERE event_id = ? ORDER BY team, player_name', [eventId]);
 
-  let team1_points = 0, team2_points = 0;
-  boardTiles.forEach(tile => {
-    tile.items.forEach(item => {
-      if (item.team1_done) team1_points += item.points;
-      if (item.team2_done) team2_points += item.points;
+  const teamResults = teams.map(team => {
+    let points = 0;
+    boardTiles.forEach(tile => {
+      tile.items.forEach(item => { if (item.done[team.team_number]) points += item.points; });
     });
+    const tilesComplete = boardTiles.filter(t => t.complete[team.team_number]).length;
+    return {
+      team_number: team.team_number,
+      team_name: team.team_name,
+      points,
+      tiles_complete: tilesComplete,
+      bingo: checkBingo(boardTiles, team.team_number)
+    };
   });
 
-  return {
-    event,
-    tiles: boardTiles,
-    team1_bingo: checkBingo(boardTiles, 1),
-    team2_bingo: checkBingo(boardTiles, 2),
-    team1_points,
-    team2_points,
-    members
-  };
+  return { event, tiles: boardTiles, teams: teamResults, members };
 }
 
 module.exports = function makeGameRouter(broadcast) {
   const router = express.Router();
 
-  // Public event listing — no code word exposed
   router.get('/events', (req, res, next) => {
     try {
-      const events = db.all("SELECT id, name, status, team1_name, team2_name FROM events ORDER BY created_at DESC");
-      res.json(events);
+      const events = db.all('SELECT id, name, status FROM events ORDER BY created_at DESC');
+      res.json(events.map(ev => ({
+        ...ev,
+        teams: db.all('SELECT team_number, team_name FROM event_teams WHERE event_id = ? ORDER BY team_number', [ev.id])
+      })));
     } catch (err) { next(err); }
   });
 
@@ -156,10 +165,6 @@ module.exports = function makeGameRouter(broadcast) {
     }
 
     const teamNum = parseInt(team);
-    if (teamNum !== 1 && teamNum !== 2) {
-      cleanup();
-      return res.status(400).json({ error: 'team must be 1 or 2' });
-    }
 
     const event = db.get('SELECT * FROM events WHERE id = ?', [req.params.id]);
     if (!event || event.status !== 'active') {
@@ -167,15 +172,21 @@ module.exports = function makeGameRouter(broadcast) {
       return res.status(400).json({ error: 'Event not found or not active' });
     }
 
-    // Verify player is on the roster for the team they are submitting for
+    const validTeam = db.get('SELECT * FROM event_teams WHERE event_id = ? AND team_number = ?', [req.params.id, teamNum]);
+    if (!validTeam) {
+      cleanup();
+      return res.status(400).json({ error: 'Invalid team' });
+    }
+
     const member = db.get(
       'SELECT id FROM team_members WHERE event_id = ? AND LOWER(player_name) = LOWER(?) AND team = ?',
       [req.params.id, player_name.trim(), teamNum]
     );
     if (!member) {
       cleanup();
-      const teamName = teamNum === 1 ? event.team1_name : event.team2_name;
-      return res.status(400).json({ error: `"${player_name}" is not on the roster for ${teamName}. Contact an admin to be added before submitting.` });
+      return res.status(400).json({
+        error: `"${player_name}" is not on the roster for ${validTeam.team_name}. Contact an admin to be added before submitting.`
+      });
     }
 
     const tileItem = db.get(`
@@ -202,7 +213,6 @@ module.exports = function makeGameRouter(broadcast) {
       return res.status(400).json({ error: `Your team has already submitted ${plural} for this item` });
     }
 
-    // Verify code word with Claude vision
     try {
       const imageData = fs.readFileSync(req.file.path).toString('base64');
       const response = await client.messages.create({

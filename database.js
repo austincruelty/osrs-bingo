@@ -132,6 +132,23 @@ async function init() {
     UNIQUE(event_id, player_name)
   )`);
 
+  _db.run(`CREATE TABLE IF NOT EXISTS event_teams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL REFERENCES events(id),
+    team_number INTEGER NOT NULL,
+    team_name TEXT NOT NULL,
+    UNIQUE(event_id, team_number)
+  )`);
+
+  // Seed event_teams from existing team1_name/team2_name columns (idempotent — UNIQUE constraint skips duplicates)
+  try {
+    const rows = db.all('SELECT id, team1_name, team2_name FROM events');
+    for (const ev of rows) {
+      try { db.run('INSERT INTO event_teams (event_id, team_number, team_name) VALUES (?, 1, ?)', [ev.id, ev.team1_name || 'Team 1']); } catch {}
+      try { db.run('INSERT INTO event_teams (event_id, team_number, team_name) VALUES (?, 2, ?)', [ev.id, ev.team2_name || 'Team 2']); } catch {}
+    }
+  } catch {}
+
   return db;
 }
 

@@ -137,11 +137,16 @@
   <!-- Create Event -->
   <section>
     <h2>Create New Event</h2>
-    <div class="form-row">
-      <input type="text" id="ev-name" placeholder="Event name">
-      <input type="text" id="ev-codeword" placeholder="Code word">
-      <input type="text" id="ev-t1" placeholder="Team 1 name">
-      <input type="text" id="ev-t2" placeholder="Team 2 name">
+    <div class="form-row" style="flex-wrap:wrap;">
+      <input type="text" id="ev-name" placeholder="Event name" style="flex:1;min-width:140px;">
+      <input type="text" id="ev-codeword" placeholder="Code word" style="flex:1;min-width:120px;">
+      <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
+        <div id="create-teams-list">
+          <input type="text" class="create-team-input" placeholder="Team 1 name" value="Team 1" style="width:100%;margin-bottom:4px;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:6px 10px;">
+          <input type="text" class="create-team-input" placeholder="Team 2 name" value="Team 2" style="width:100%;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:6px 10px;">
+        </div>
+        <button type="button" class="btn btn-gray" onclick="addCreateTeam()" style="font-size:0.72rem;padding:3px 8px;align-self:flex-start;">+ Team</button>
+      </div>
       <button class="btn btn-gold" onclick="submitNewEvent()">Create Event</button>
     </div>
     <div id="create-status" style="font-size:0.8rem;"></div>
@@ -170,13 +175,10 @@
         <label>Code Word</label>
         <input type="text" id="edit-codeword">
       </div>
-      <div class="edit-field">
-        <label>Team 1 Name</label>
-        <input type="text" id="edit-t1">
-      </div>
-      <div class="edit-field">
-        <label>Team 2 Name</label>
-        <input type="text" id="edit-t2">
+      <div class="edit-field" style="grid-column:1/-1">
+        <label>Teams</label>
+        <div id="team-editor" style="display:flex;flex-direction:column;gap:5px;"></div>
+        <button type="button" class="btn btn-blue" onclick="addTeam()" style="margin-top:7px;font-size:0.78rem;padding:5px 12px;">+ Add Team</button>
       </div>
     </div>
     <div class="edit-field" style="margin-top:12px;">
@@ -191,24 +193,7 @@
   <!-- Team Roster -->
   <section id="roster-section" style="display:none">
     <h2>Team Roster</h2>
-    <div class="roster-grid">
-      <div class="roster-team t1">
-        <h3 id="roster-t1-name">Team 1</h3>
-        <div class="member-list" id="roster-t1-list"></div>
-        <div class="add-member-row">
-          <input type="text" id="add-t1-name" placeholder="Player RSN" maxlength="12">
-          <button class="btn btn-blue" onclick="addMember(1)">Add</button>
-        </div>
-      </div>
-      <div class="roster-team t2">
-        <h3 id="roster-t2-name">Team 2</h3>
-        <div class="member-list" id="roster-t2-list"></div>
-        <div class="add-member-row">
-          <input type="text" id="add-t2-name" placeholder="Player RSN" maxlength="12">
-          <button class="btn btn-blue" onclick="addMember(2)">Add</button>
-        </div>
-      </div>
-    </div>
+    <div class="roster-grid" id="roster-grid"></div>
   </section>
 
   <!-- Board Editor -->
@@ -290,6 +275,7 @@
 <script>
 let selectedEventId = null;
 let selectedEventData = null;
+let selectedTeamsList = [];
 let gridData = {};
 let editingCell = null;
 let adminPassword = localStorage.getItem('adminPassword') || '';
@@ -342,10 +328,11 @@ async function loadEvents() {
     events.forEach(ev => {
       const div = document.createElement('div');
       div.className = 'event-item' + (String(ev.id) === String(selectedEventId) ? ' selected' : '');
+      const teamNames = (ev.teams || []).map(t => escHtml(t.team_name)).join(' vs ') || 'No teams';
       div.innerHTML = `
         <div>
           <div class="ev-name">${escHtml(ev.name)}</div>
-          <div class="ev-meta">Code word: <b>${escHtml(ev.code_word)}</b> &nbsp;·&nbsp; ${escHtml(ev.team1_name)} vs ${escHtml(ev.team2_name)}</div>
+          <div class="ev-meta">Code word: <b>${escHtml(ev.code_word)}</b> &nbsp;·&nbsp; ${teamNames}</div>
         </div>
         <span class="status-badge status-${ev.status}">${ev.status}</span>
       `;
@@ -357,11 +344,24 @@ async function loadEvents() {
   }
 }
 
+function addCreateTeam() {
+  const list = document.getElementById('create-teams-list');
+  const num = list.querySelectorAll('.create-team-input').length + 1;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'create-team-input';
+  input.placeholder = `Team ${num} name`;
+  input.value = `Team ${num}`;
+  input.style.cssText = 'width:100%;margin-top:4px;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:6px 10px;';
+  list.appendChild(input);
+}
+
 async function submitNewEvent() {
   const name = document.getElementById('ev-name').value.trim();
   const code_word = document.getElementById('ev-codeword').value.trim();
-  const team1_name = document.getElementById('ev-t1').value.trim() || 'Team 1';
-  const team2_name = document.getElementById('ev-t2').value.trim() || 'Team 2';
+  const teamInputs = Array.from(document.querySelectorAll('#create-teams-list .create-team-input'));
+  const team1_name = (teamInputs[0]?.value || '').trim() || 'Team 1';
+  const team2_name = (teamInputs[1]?.value || '').trim() || 'Team 2';
   const statusEl = document.getElementById('create-status');
   if (!name || !code_word) {
     statusEl.style.color = '#e05050'; statusEl.textContent = 'Event name and code word are required.'; return;
@@ -375,9 +375,24 @@ async function submitNewEvent() {
     });
     const data = await res.json();
     if (data.id) {
+      // Add any extra teams beyond 2
+      for (let i = 2; i < teamInputs.length; i++) {
+        const tname = (teamInputs[i]?.value || '').trim() || `Team ${i + 1}`;
+        await adminFetch(`/api/admin/events/${data.id}/teams`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ team_name: tname })
+        });
+      }
       statusEl.style.color = '#50c878'; statusEl.textContent = `"${name}" created!`;
       document.getElementById('ev-name').value = '';
       document.getElementById('ev-codeword').value = '';
+      // Reset team list back to 2
+      const list = document.getElementById('create-teams-list');
+      const inputs = list.querySelectorAll('.create-team-input');
+      inputs[0].value = 'Team 1';
+      inputs[1].value = 'Team 2';
+      Array.from(inputs).slice(2).forEach(el => el.remove());
       loadEvents();
     } else {
       statusEl.style.color = '#e05050'; statusEl.textContent = data.error || 'Something went wrong.';
@@ -391,29 +406,28 @@ async function selectEvent(ev) {
   selectedEventId = ev.id;
   selectedEventData = ev;
 
-  // Show all management sections
   document.getElementById('edit-section').style.display = 'block';
   document.getElementById('roster-section').style.display = 'block';
   document.getElementById('board-section').style.display = 'block';
   document.getElementById('submissions-section').style.display = 'block';
 
-  // Populate edit fields
   document.getElementById('edit-event-name').textContent = ev.name;
   document.getElementById('edit-name').value = ev.name;
   document.getElementById('edit-codeword').value = ev.code_word;
-  document.getElementById('edit-t1').value = ev.team1_name;
-  document.getElementById('edit-t2').value = ev.team2_name;
   document.getElementById('edit-rules').value = ev.rules || '';
   document.getElementById('board-event-name').textContent = ev.name;
-
-  // Roster labels
-  document.getElementById('roster-t1-name').textContent = ev.team1_name;
-  document.getElementById('roster-t2-name').textContent = ev.team2_name;
 
   document.querySelectorAll('.event-item').forEach(el => el.classList.remove('selected'));
   document.querySelectorAll('.event-item').forEach(el => {
     if (el.querySelector('.ev-name')?.textContent === ev.name) el.classList.add('selected');
   });
+
+  // Load teams and render dynamic editors
+  const teamsRes = await adminFetch(`/api/admin/events/${selectedEventId}/teams`);
+  const teams = await teamsRes.json();
+  selectedTeamsList = teams;
+  renderTeamEditor(teams);
+  renderRosterPanels(teams);
 
   await loadBoardData();
   initGrid();
@@ -421,26 +435,93 @@ async function selectEvent(ev) {
   loadSubmissions();
 }
 
+function renderTeamEditor(teams) {
+  const el = document.getElementById('team-editor');
+  el.innerHTML = teams.map((t, i) => `
+    <div class="team-editor-row" data-team="${t.team_number}" style="display:flex;gap:8px;align-items:center;">
+      <span style="font-size:0.72rem;color:#4a7fc1;min-width:54px;flex-shrink:0;">Team ${t.team_number}</span>
+      <input type="text" value="${escHtml(t.team_name)}"
+             style="flex:1;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:6px 10px;font-size:0.85rem;">
+      ${i >= 2 ? `<button class="btn btn-red" onclick="removeTeam(${t.team_number})" style="font-size:0.72rem;padding:3px 8px;flex-shrink:0;">✕ Remove</button>` : ''}
+    </div>
+  `).join('');
+}
+
+function renderRosterPanels(teams) {
+  const grid = document.getElementById('roster-grid');
+  grid.innerHTML = teams.map(t => `
+    <div class="roster-team">
+      <h3 id="roster-name-${t.team_number}">${escHtml(t.team_name)} <small style="color:#445;font-size:0.7rem;font-family:sans-serif;font-weight:400;">(Team ${t.team_number})</small></h3>
+      <div class="member-list" id="roster-list-${t.team_number}"></div>
+      <div class="add-member-row">
+        <input type="text" id="add-member-${t.team_number}" placeholder="Player RSN" maxlength="12">
+        <button class="btn btn-blue" onclick="addMember(${t.team_number})">Add</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function addTeam() {
+  const res = await adminFetch(`/api/admin/events/${selectedEventId}/teams`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ team_name: '' })
+  });
+  const data = await res.json();
+  if (data.team_number) {
+    const teamsRes = await adminFetch(`/api/admin/events/${selectedEventId}/teams`);
+    const teams = await teamsRes.json();
+    selectedTeamsList = teams;
+    renderTeamEditor(teams);
+    renderRosterPanels(teams);
+    await loadMembers();
+  } else {
+    alert(data.error || 'Failed to add team.');
+  }
+}
+
+async function removeTeam(teamNum) {
+  if (!confirm(`Remove Team ${teamNum}? This will fail if there are any players or submissions on this team.`)) return;
+  const res = await adminFetch(`/api/admin/events/${selectedEventId}/teams/${teamNum}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.ok) {
+    const teamsRes = await adminFetch(`/api/admin/events/${selectedEventId}/teams`);
+    const teams = await teamsRes.json();
+    selectedTeamsList = teams;
+    renderTeamEditor(teams);
+    renderRosterPanels(teams);
+    await loadMembers();
+  } else {
+    alert(data.error || 'Failed to remove team.');
+  }
+}
+
 async function saveEventEdits() {
   const statusEl = document.getElementById('edit-status');
   const name = document.getElementById('edit-name').value.trim();
   const code_word = document.getElementById('edit-codeword').value.trim();
-  const team1_name = document.getElementById('edit-t1').value.trim();
-  const team2_name = document.getElementById('edit-t2').value.trim();
   const rules = document.getElementById('edit-rules').value;
+  const teams = Array.from(document.querySelectorAll('#team-editor .team-editor-row')).map(row => ({
+    team_number: parseInt(row.dataset.team),
+    team_name: row.querySelector('input[type=text]').value.trim()
+  }));
   if (!name || !code_word) { statusEl.className = 'error-notice'; statusEl.textContent = 'Name and code word required.'; return; }
   try {
     await adminFetch(`/api/admin/events/${selectedEventId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, code_word, team1_name, team2_name, rules })
+      body: JSON.stringify({ name, code_word, rules, teams })
     });
     statusEl.className = 'save-notice'; statusEl.textContent = 'Saved!';
     document.getElementById('edit-event-name').textContent = name;
     document.getElementById('board-event-name').textContent = name;
-    document.getElementById('roster-t1-name').textContent = team1_name;
-    document.getElementById('roster-t2-name').textContent = team2_name;
-    selectedEventData = { ...selectedEventData, name, code_word, team1_name, team2_name };
+    selectedEventData = { ...selectedEventData, name, code_word };
+    selectedTeamsList = teams;
+    // Update roster panel headers
+    teams.forEach(t => {
+      const header = document.getElementById(`roster-name-${t.team_number}`);
+      if (header) header.innerHTML = `${escHtml(t.team_name)} <small style="color:#445;font-size:0.7rem;font-family:sans-serif;font-weight:400;">(Team ${t.team_number})</small>`;
+    });
     loadEvents();
     setTimeout(() => { statusEl.textContent = ''; }, 2000);
   } catch (err) {
@@ -469,15 +550,16 @@ async function loadMembers() {
   try {
     const res = await adminFetch(`/api/admin/events/${selectedEventId}/members`);
     const members = await res.json();
-    const t1 = members.filter(m => m.team === 1);
-    const t2 = members.filter(m => m.team === 2);
-    renderMemberList('roster-t1-list', t1);
-    renderMemberList('roster-t2-list', t2);
+    for (const team of selectedTeamsList) {
+      const teamMembers = members.filter(m => m.team === team.team_number);
+      renderMemberList(`roster-list-${team.team_number}`, teamMembers);
+    }
   } catch {}
 }
 
 function renderMemberList(elId, members) {
   const el = document.getElementById(elId);
+  if (!el) return;
   if (!members.length) { el.innerHTML = '<div style="color:#445;font-size:0.8rem;">No players yet.</div>'; return; }
   el.innerHTML = members.map(m => `
     <div class="member-row">
@@ -488,8 +570,8 @@ function renderMemberList(elId, members) {
 }
 
 async function addMember(team) {
-  const inputId = team === 1 ? 'add-t1-name' : 'add-t2-name';
-  const name = document.getElementById(inputId).value.trim();
+  const inputEl = document.getElementById(`add-member-${team}`);
+  const name = inputEl?.value.trim();
   if (!name) return;
   const res = await adminFetch(`/api/admin/events/${selectedEventId}/members`, {
     method: 'POST',
@@ -498,7 +580,7 @@ async function addMember(team) {
   });
   const data = await res.json();
   if (data.id) {
-    document.getElementById(inputId).value = '';
+    if (inputEl) inputEl.value = '';
     loadMembers();
   } else {
     alert(data.error || 'Could not add player.');
@@ -648,7 +730,7 @@ async function loadSubmissions() {
         <tbody>${subs.map(s => `
           <tr>
             <td>${escHtml(s.player_name)}</td>
-            <td>Team ${s.team}</td>
+            <td>${escHtml(s.team_name || `Team ${s.team}`)}</td>
             <td>${escHtml(s.tile_name)}</td>
             <td>${escHtml(s.item_name)}</td>
             <td><img src="/${escHtml(s.screenshot_path)}" onclick="previewImg(this.src)" alt="screenshot"></td>

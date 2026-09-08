@@ -147,8 +147,6 @@
     }
     .team-card.bingo { border-color: #c89b3c; animation: pulse 1.2s infinite; }
     .team-card.bingo::before { opacity: 1; background: linear-gradient(90deg, transparent, #c89b3c, transparent); }
-    .team-card.active-t1 { border-color: #4a7fc1; box-shadow: 0 0 20px #4a7fc133; }
-    .team-card.active-t2 { border-color: #c85a1a; box-shadow: 0 0 20px #c85a1a33; }
     .team-card.dimmed { opacity: 0.4; }
     .view-hint { font-size: 0.65rem; color: #445; margin-top: 2px; }
 
@@ -247,8 +245,6 @@
     .feed-sprite { width: 20px; height: 20px; object-fit: contain; image-rendering: pixelated; flex-shrink: 0; }
     .feed-item-name { font-size: 0.78rem; font-weight: 600; color: #d4cbb8; line-height: 1.2; }
     .feed-meta { font-size: 0.68rem; color: #556; line-height: 1.4; }
-    .feed-team-t1 { color: #4a7fc1; font-weight: 600; }
-    .feed-team-t2 { color: #c85a1a; font-weight: 600; }
     .feed-player { color: #8899aa; }
     .feed-time { font-size: 0.62rem; color: #2a3a54; margin-top: 2px; }
     @media (max-width: 700px) { #feed-panel { display: none; } }
@@ -268,8 +264,6 @@
     .rsn-suggestion:hover { background: #1e2a40; }
     .rsn-suggestion-name { color: #d4cbb8; }
     .rsn-suggestion-team { font-size: 0.65rem; padding: 2px 7px; border-radius: 8px; white-space: nowrap; }
-    .rsn-t1 { background: #0f2040; color: #4a7fc1; }
-    .rsn-t2 { background: #2a1008; color: #c85a1a; }
 
     .tile {
       background: linear-gradient(160deg, #111827, #0d1525);
@@ -284,8 +278,6 @@
       transition: border-color 0.3s, box-shadow 0.3s;
     }
     .tile:hover { border-color: #4a7fc133; }
-    .tile.team1-complete { border-color: #4a7fc1; box-shadow: 0 0 8px #4a7fc133; }
-    .tile.team2-complete { border-color: #c85a1a; box-shadow: 0 0 8px #c85a1a33; }
     .tile.both-complete { border-color: #c89b3c; box-shadow: 0 0 12px #c89b3c44; background: linear-gradient(160deg, #1a1508, #150f02); }
 
     .tile-name {
@@ -319,15 +311,12 @@
     .qty-progress.done { opacity: 0.5; }
     .tile-item-name { flex: 1; color: #b0a898; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tile-item.item-done .tile-item-name { color: #d4cbb8; }
-    .tile.other-team-faint { border-color: #1e2a40 !important; opacity: 0.85; }
     .team-dots { display: flex; gap: 3px; }
     .dot {
       width: 10px; height: 10px; border-radius: 50%;
       border: 1px solid #2a3550;
       background: #080c16;
     }
-    .dot.t1-done { background: #4a7fc1; border-color: #4a7fc1; box-shadow: 0 0 4px #4a7fc188; }
-    .dot.t2-done { background: #c85a1a; border-color: #c85a1a; box-shadow: 0 0 4px #c85a1a88; }
 
     /* Legend */
     .legend {
@@ -536,26 +525,10 @@
 </header>
 <div class="header-glow"></div>
 
-<div class="team-scoreboard" id="scoreboard" style="display:none">
-  <div class="team-card" id="team1-card" onclick="toggleTeamView(1)" title="Click to view this team's board">
-    <h2 id="team1-name">Team 1</h2>
-    <div><span class="tiles-done" id="team1-pts">0</span> <span class="tiles-label">pts</span></div>
-    <div class="tiles-sub" id="team1-tiles-sub">0 tiles complete</div>
-    <div class="view-hint">Click to view board</div>
-    <div class="team-roster" id="team1-roster"></div>
-  </div>
-  <div class="team-card" id="team2-card" onclick="toggleTeamView(2)" title="Click to view this team's board">
-    <h2 id="team2-name">Team 2</h2>
-    <div><span class="tiles-done" id="team2-pts">0</span> <span class="tiles-label">pts</span></div>
-    <div class="tiles-sub" id="team2-tiles-sub">0 tiles complete</div>
-    <div class="view-hint">Click to view board</div>
-    <div class="team-roster" id="team2-roster"></div>
-  </div>
-</div>
+<div class="team-scoreboard" id="scoreboard" style="display:none"></div>
 
-<div class="legend">
-  <div class="legend-item"><div class="legend-dot" style="background:#4a7fc1;box-shadow:0 0 4px #4a7fc1"></div> <span id="legend-t1">Team 1 done</span></div>
-  <div class="legend-item"><div class="legend-dot" style="background:#c85a1a;box-shadow:0 0 4px #c85a1a"></div> <span id="legend-t2">Team 2 done</span></div>
+<div class="legend" id="legend" style="display:none">
+  <div id="legend-items" style="display:flex;gap:20px;flex-wrap:wrap;"></div>
 </div>
 
 <div id="team-view-bar" style="display:none;padding:8px 24px;background:#0a0f1e;border-bottom:1px solid #1e2a40;font-size:0.82rem;display:none;align-items:center;gap:12px;">
@@ -605,8 +578,6 @@
       <label>Your Team</label>
       <select id="f-team">
         <option value="">Select team...</option>
-        <option value="1" id="f-team1-opt">Team 1</option>
-        <option value="2" id="f-team2-opt">Team 2</option>
       </select>
     </div>
     <div class="form-group">
