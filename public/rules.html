@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rules — Veritas Bingo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Segoe+UI&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d0f1a;
+      color: #d4cbb8;
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      background-image: radial-gradient(ellipse at top, #1a2340 0%, #0d0f1a 70%);
+    }
+
+    header {
+      background: linear-gradient(180deg, #111827 0%, #0d1220 100%);
+      border-bottom: 2px solid #c89b3c;
+      box-shadow: 0 2px 20px #c89b3c33;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand img { width: 48px; height: 48px; object-fit: contain; filter: drop-shadow(0 0 8px #4a7fc188); }
+    .brand-text { display: flex; flex-direction: column; }
+    .brand-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #c89b3c 0%, #e8c96a 50%, #c89b3c 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.05em;
+      line-height: 1.1;
+    }
+    .brand-sub { font-size: 0.65rem; color: #4a7fc1; letter-spacing: 0.15em; text-transform: uppercase; }
+
+    .header-back {
+      color: #4a7fc1;
+      font-size: 0.8rem;
+      text-decoration: none;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    .header-back:hover { opacity: 1; }
+
+    main {
+      max-width: 860px;
+      margin: 36px auto;
+      padding: 0 20px 60px;
+    }
+
+    .page-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #c89b3c;
+      text-align: center;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+    .page-subtitle {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #4a7fc1;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 36px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #c89b3c44;
+      margin: 28px 0;
+    }
+
+    /* Section headers */
+    .section-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #c89b3c;
+      letter-spacing: 0.06em;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #c89b3c44;
+    }
+
+    /* Tile clarifications */
+    .clarification-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .clarification-card {
+      background: #111827;
+      border: 1px solid #1e2a40;
+      border-left: 3px solid #4a7fc1;
+      border-radius: 6px;
+      padding: 12px 16px;
+    }
+    .clarification-card.gold { border-left-color: #c89b3c; }
+    .clarification-card.orange { border-left-color: #c85a1a; }
+    .clarification-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #e8c96a;
+      margin-bottom: 4px;
+    }
+    .clarification-text { font-size: 0.88rem; color: #b0a898; line-height: 1.55; }
+    .clarification-sub {
+      font-size: 0.82rem;
+      color: #7a8fa8;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid #1e2a40;
+      line-height: 1.5;
+    }
+    .clarification-sub strong { color: #c89b3c; }
+
+    /* Bingo scoring */
+    .scoring-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .scoring-card {
+      background: #111827;
+      border: 1px solid #1e2a40;
+      border-radius: 6px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .scoring-value {
+      font-family: 'Cinzel', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #c89b3c;
+      margin-bottom: 4px;
+    }
+    .scoring-label { font-size: 0.8rem; color: #7a8fa8; letter-spacing: 0.05em; }
+    .scoring-note { font-size: 0.78rem; color: #4a7fc1; margin-top: 4px; line-height: 1.4; }
+
+    /* Numbered rules */
+    .rules-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .rules-list li {
+      display: flex;
+      gap: 14px;
+      background: #111827;
+      border: 1px solid #1e2a40;
+      border-radius: 6px;
+      padding: 11px 14px;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      color: #b0a898;
+    }
+    .rules-list li .rule-num {
+      font-family: 'Cinzel', serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #4a7fc1;
+      min-width: 28px;
+      padding-top: 1px;
+      flex-shrink: 0;
+    }
+    .rules-list li strong { color: #d4cbb8; }
+    .rules-list li.rule-sub {
+      margin-left: 42px;
+      background: #0d1525;
+      border-left: 2px solid #1e2a40;
+    }
+    .rules-list li.rule-sub .rule-num { color: #4a7fc177; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="brand" style="text-decoration:none;">
+    <img src="/veritas-logo.png" alt="Veritas" onerror="this.style.display='none'">
+    <div class="brand-text">
+      <span class="brand-title">Veritas Bingo</span>
+      <span class="brand-sub">Event Rules</span>
+    </div>
+  </a>
+  <a href="/" class="header-back">← Back to Board</a>
+</header>
+
+<main>
+  <h1 class="page-title">Event Rules & Clarifications</h1>
+  <p class="page-subtitle">Read carefully before participating</p>
+
+  <!-- Tile Clarifications -->
+  <div class="section-title">Tile Clarifications</div>
+  <div class="clarification-list">
+
+    <div class="clarification-card gold">
+      <div class="clarification-label">Yama</div>
+      <div class="clarification-text">
+        You <strong>MUST</strong> receive all of the items as an actual drop. You <strong>CANNOT</strong> craft them. You <strong>CANNOT</strong> use any contracts to speed up the drop process either.
+      </div>
+    </div>
+
+    <div class="clarification-card">
+      <div class="clarification-label">All Multi-Drop Tiles</div>
+      <div class="clarification-text">
+        All tiles that have multiples will count for the next tier. For example, in Zulrah — Tier 1 requires 1 unique, Tier 2 requires 2 <strong>total</strong> uniques, etc.
+      </div>
+    </div>
+
+    <div class="clarification-card gold">
+      <div class="clarification-label">Kalphite Queen</div>
+      <div class="clarification-text">
+        All drops for this tile <strong>MUST</strong> come from KQ, and you must show the looting log to prove it.
+      </div>
+    </div>
+
+    <div class="clarification-card orange">
+      <div class="clarification-label">Pets</div>
+      <div class="clarification-text">
+        Any pets obtained during the event will award the team that got them <strong>5 BONUS POINTS</strong> at the end of the event.
+      </div>
+      <div class="clarification-sub">
+        <strong>Exceptions:</strong> Any pet that is <strong>NOT</strong> from a boss or activity on the board will not count. Rocky will count from its respective activities only. Beef will <strong>NOT</strong> give bonuses on top of its tile requirement.
+      </div>
+    </div>
+
+    <div class="clarification-card">
+      <div class="clarification-label">Raids</div>
+      <div class="clarification-text">
+        Raids uniques must be earned in your <strong>team's name</strong> for it to count toward your board.
+      </div>
+    </div>
+
+  </div>
+
+  <hr class="divider">
+
+  <!-- Bingo Scoring -->
+  <div class="section-title">Bingo Scoring</div>
+  <div class="scoring-grid">
+    <div class="scoring-card">
+      <div class="scoring-value">+5 pts</div>
+      <div class="scoring-label">Per Completed Row, Column, or Diagonal</div>
+    </div>
+    <div class="scoring-card">
+      <div class="scoring-value">+5 pts</div>
+      <div class="scoring-label">Per Pet Obtained</div>
+      <div class="scoring-note">From eligible bosses/activities on the board only</div>
+    </div>
+    <div class="scoring-card">
+      <div class="scoring-value">Blackout</div>
+      <div class="scoring-label">Automatic Win</div>
+      <div class="scoring-note">First team to complete every tile wins outright — regardless of points or pet bonuses</div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- General Rules -->
+  <div class="section-title">General Rules</div>
+  <ol class="rules-list">
+    <li>
+      <span class="rule-num">1.</span>
+      <span>Follow all Rules and Guidelines.</span>
+    </li>
+    <li>
+      <span class="rule-num">2.</span>
+      <span>Any form of <strong>discrimination, toxicity, or exclusion</strong> will not be tolerated.</span>
+    </li>
+    <li>
+      <span class="rule-num">3.</span>
+      <span>You <strong>MUST</strong> have your <strong>Clan Events plugin</strong> turned on and it must be included in all screenshots/submissions.</span>
+    </li>
+    <li>
+      <span class="rule-num">4.</span>
+      <span>You <strong>MUST</strong> have the <strong>XP Updater Plugin</strong> with WiseOldMan turned on.</span>
+    </li>
+    <li>
+      <span class="rule-num">5.</span>
+      <span>Any drops, XP gains, etc., must be completed by <strong>you</strong> on any accounts you play on. These accounts <strong>MUST</strong> be specified in your sign-up.</span>
+    </li>
+    <li>
+      <span class="rule-num">6.</span>
+      <span>You may use other accounts to help your main one, however if the other accounts get a drop, <strong>it will not count</strong>.</span>
+    </li>
+    <li class="rule-sub">
+      <span class="rule-num">6a.</span>
+      <span>If you are swapping accounts, it <strong>MUST</strong> be specified in the clock-in and clock-out channel.</span>
+    </li>
+    <li>
+      <span class="rule-num">7.</span>
+      <span>Any <strong>cheating</strong> will not be tolerated and action will be taken immediately.</span>
+    </li>
+    <li>
+      <span class="rule-num">8.</span>
+      <span>You may <strong>not</strong> attempt to grief anyone on your team or the opposite team — whether that means trying to kill one another, giving inexperienced players wrong advice intentionally, etc.</span>
+    </li>
+    <li>
+      <span class="rule-num">9.</span>
+      <span>All submissions <strong>MUST</strong> be posted in the designated submissions channels. They also need to include the event password as stated in Rule #3.</span>
+    </li>
+    <li>
+      <span class="rule-num">10.</span>
+      <span>You are encouraged to post your submissions <strong>as soon as</strong> the tiles are completed. <strong>Holding submissions is not allowed.</strong></span>
+    </li>
+    <li>
+      <span class="rule-num">11.</span>
+      <span><strong>No pre-stacking!</strong> Use your stacked rewards at the respective events.</span>
+    </li>
+  </ol>
+</main>
+
+</body>
+</html>
