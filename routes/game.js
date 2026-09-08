@@ -167,6 +167,17 @@ module.exports = function makeGameRouter(broadcast) {
       return res.status(400).json({ error: 'Event not found or not active' });
     }
 
+    // Verify player is on the roster for the team they are submitting for
+    const member = db.get(
+      'SELECT id FROM team_members WHERE event_id = ? AND LOWER(player_name) = LOWER(?) AND team = ?',
+      [req.params.id, player_name.trim(), teamNum]
+    );
+    if (!member) {
+      cleanup();
+      const teamName = teamNum === 1 ? event.team1_name : event.team2_name;
+      return res.status(400).json({ error: `"${player_name}" is not on the roster for ${teamName}. Contact an admin to be added before submitting.` });
+    }
+
     const tileItem = db.get(`
       SELECT ti.*, t.event_id, t.id as tile_id
       FROM tile_items ti
