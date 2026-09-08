@@ -757,9 +757,9 @@ async function loadSubmissions() {
     if (!subs.length) { el.textContent = 'No submissions yet.'; return; }
     el.innerHTML = `
       <table class="submissions-table">
-        <thead><tr><th>Player</th><th>Team</th><th>Tile</th><th>Item</th><th>Screenshot</th><th>Status</th><th>Time</th></tr></thead>
+        <thead><tr><th>Player</th><th>Team</th><th>Tile</th><th>Item</th><th>Screenshot</th><th>Status</th><th>Time</th><th>Actions</th></tr></thead>
         <tbody>${subs.map(s => `
-          <tr>
+          <tr id="sub-row-${s.id}">
             <td>${escHtml(s.player_name)}</td>
             <td>${escHtml(s.team_name || `Team ${s.team}`)}</td>
             <td>${escHtml(s.tile_name)}</td>
@@ -767,10 +767,42 @@ async function loadSubmissions() {
             <td><img src="/${escHtml(s.screenshot_path)}" onclick="previewImg(this.src)" alt="screenshot"></td>
             <td><span class="sub-${s.status}">${s.status}</span></td>
             <td style="font-size:0.75rem;color:#556;">${new Date(s.created_at + 'Z').toLocaleString()}</td>
+            <td style="white-space:nowrap;">
+              ${s.status === 'approved'
+                ? `<button class="btn btn-red" style="font-size:0.72rem;padding:3px 8px;margin-right:4px;" onclick="rejectSubmission(${s.id})">Unapprove</button>`
+                : `<button class="btn btn-green" style="font-size:0.72rem;padding:3px 8px;margin-right:4px;" onclick="approveSubmission(${s.id})">Approve</button>`
+              }
+              <button class="btn btn-red" style="font-size:0.72rem;padding:3px 8px;background:#4a1010;" onclick="deleteSubmission(${s.id})">Delete</button>
+            </td>
           </tr>`).join('')}
         </tbody>
       </table>`;
   } catch {}
+}
+
+async function rejectSubmission(id) {
+  if (!confirm('Unapprove this submission? It will no longer count toward the board.')) return;
+  await adminFetch(`/api/admin/submissions/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'rejected' })
+  });
+  loadSubmissions();
+}
+
+async function approveSubmission(id) {
+  await adminFetch(`/api/admin/submissions/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'approved' })
+  });
+  loadSubmissions();
+}
+
+async function deleteSubmission(id) {
+  if (!confirm('Permanently delete this submission? This cannot be undone.')) return;
+  await adminFetch(`/api/admin/submissions/${id}`, { method: 'DELETE' });
+  loadSubmissions();
 }
 
 function previewImg(src) {

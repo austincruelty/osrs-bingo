@@ -176,5 +176,13 @@ module.exports = function makeAdminRouter(broadcast) {
     res.json({ ok: true });
   });
 
+  router.delete('/submissions/:submissionId', (req, res) => {
+    const sub = db.get('SELECT * FROM submissions WHERE id = ?', [req.params.submissionId]);
+    if (!sub) return res.status(404).json({ error: 'Submission not found' });
+    db.run('DELETE FROM submissions WHERE id = ?', [req.params.submissionId]);
+    broadcast(sub.event_id);
+    res.json({ ok: true });
+  });
+
   return router;
 };
