@@ -114,7 +114,7 @@ function renderBoard(data) {
   tiles.forEach(t => { if (t.row > maxRow) maxRow = t.row; if (t.col > maxCol) maxCol = t.col; });
   const cols = maxCol + 1;
   const rows = maxRow + 1;
-  boardEl.style.gridTemplateColumns = `repeat(${cols}, minmax(70px, 105px))`;
+  boardEl.style.gridTemplateColumns = `repeat(${cols}, minmax(130px, 1fr))`;
   boardEl.innerHTML = '';
 
   const tileMap = {};
