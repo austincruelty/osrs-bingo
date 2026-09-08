@@ -146,10 +146,7 @@ function renderBoard(data) {
         if (theirComplete) el.classList.add('other-team-faint');
       }
 
-      const firstItem = tile.items[0];
-      const headerSprite = firstItem
-        ? `<img src="${itemSpriteUrl(firstItem.item_name)}" class="tile-header-sprite" onerror="this.style.display='none'" alt="">`
-        : '';
+      const headerSprite = `<img src="${itemSpriteUrl(tile.tile_name)}" class="tile-header-sprite" onerror="this.style.display='none'" alt="">`;
       el.innerHTML = `<div class="tile-header">${headerSprite}<span class="tile-name">${escHtml(tile.tile_name)}</span></div>` +
         tile.items.map(item => {
           const stars = '★'.repeat(item.points || 1);

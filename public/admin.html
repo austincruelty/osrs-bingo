@@ -537,7 +537,7 @@ function initGrid() {
       const cell = document.createElement('div');
       cell.className = 'grid-cell' + (tile ? ' filled' : '');
       cell.innerHTML = tile
-        ? `<div class="cell-name">${escHtml(tile.tile_name)}</div><div class="cell-items">${(tile.items||[]).map(i => escHtml(i.item_name)).join(', ')}</div>`
+        ? `<img src="${itemSpriteUrl(tile.tile_name)}" style="width:28px;height:28px;object-fit:contain;image-rendering:pixelated;" onerror="this.style.display='none'" alt=""><div class="cell-name">${escHtml(tile.tile_name)}</div><div class="cell-items">${(tile.items||[]).map(i => escHtml(i.item_name)).join(', ')}</div>`
         : `<div style="color:#2a3a54;font-size:1.4rem;">+</div>`;
       cell.onclick = () => openTileModal(r, c, tile);
       cell.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; cell.classList.add('drag-over'); };
