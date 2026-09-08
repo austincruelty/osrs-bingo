@@ -323,6 +323,43 @@ async function submitDrop() {
   }
 }
 
+// ── RSN Autocomplete ────────────────────────────────────────
+
+function rsnInput(query) {
+  const suggestionsEl = document.getElementById('rsn-suggestions');
+  suggestionsEl.innerHTML = '';
+  const q = query.trim().toLowerCase();
+  if (!q || !currentBoard?.members?.length) { suggestionsEl.style.display = 'none'; return; }
+
+  const matches = currentBoard.members.filter(m =>
+    m.player_name.toLowerCase().startsWith(q)
+  );
+  if (!matches.length) { suggestionsEl.style.display = 'none'; return; }
+
+  matches.forEach(m => {
+    const teamName = m.team === 1 ? currentBoard.event.team1_name : currentBoard.event.team2_name;
+    const div = document.createElement('div');
+    div.className = 'rsn-suggestion';
+    div.innerHTML = `<span class="rsn-suggestion-name">${escHtml(m.player_name)}</span><span class="rsn-suggestion-team rsn-t${m.team}">${escHtml(teamName)}</span>`;
+    div.addEventListener('mousedown', e => {
+      e.preventDefault(); // keep focus so blur doesn't fire first
+      document.getElementById('f-player').value = m.player_name;
+      document.getElementById('f-team').value = m.team;
+      suggestionsEl.style.display = 'none';
+    });
+    suggestionsEl.appendChild(div);
+  });
+  suggestionsEl.style.display = 'block';
+}
+
+function rsnBlur() {
+  // small delay so mousedown on a suggestion fires before blur hides it
+  setTimeout(() => {
+    const el = document.getElementById('rsn-suggestions');
+    if (el) el.style.display = 'none';
+  }, 150);
+}
+
 // ── Live Feed ───────────────────────────────────────────────
 
 function timeAgo(dateStr) {

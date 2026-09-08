@@ -253,6 +253,24 @@
     .feed-time { font-size: 0.62rem; color: #2a3a54; margin-top: 2px; }
     @media (max-width: 700px) { #feed-panel { display: none; } }
 
+    /* RSN autocomplete */
+    .rsn-wrap { position: relative; }
+    #rsn-suggestions {
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
+      background: #0f1e3a; border: 1px solid #4a7fc1;
+      border-top: none; border-radius: 0 0 4px 4px;
+      max-height: 180px; overflow-y: auto; display: none;
+    }
+    .rsn-suggestion {
+      padding: 8px 12px; cursor: pointer; font-size: 0.85rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    .rsn-suggestion:hover { background: #1e2a40; }
+    .rsn-suggestion-name { color: #d4cbb8; }
+    .rsn-suggestion-team { font-size: 0.65rem; padding: 2px 7px; border-radius: 8px; white-space: nowrap; }
+    .rsn-t1 { background: #0f2040; color: #4a7fc1; }
+    .rsn-t2 { background: #2a1008; color: #c85a1a; }
+
     .tile {
       background: linear-gradient(160deg, #111827, #0d1525);
       border: 1px solid #1e2a40;
@@ -578,7 +596,10 @@
     <h2>Submit a Drop</h2>
     <div class="form-group">
       <label>Your RSN</label>
-      <input type="text" id="f-player" placeholder="YourName123" maxlength="12">
+      <div class="rsn-wrap">
+        <input type="text" id="f-player" placeholder="YourName123" maxlength="12" autocomplete="off" oninput="rsnInput(this.value)" onblur="rsnBlur()">
+        <div id="rsn-suggestions"></div>
+      </div>
     </div>
     <div class="form-group">
       <label>Your Team</label>
