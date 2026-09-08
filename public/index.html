@@ -366,7 +366,6 @@
   <div class="header-controls">
     <select id="event-select"><option value="">Select Event...</option></select>
     <button id="submit-btn" onclick="openSubmitModal()">Submit Drop</button>
-    <a href="/rules.html" class="admin-link" target="_blank">Rules</a>
     <a href="/admin.html" class="admin-link">Admin</a>
   </div>
 </header>
@@ -397,6 +396,14 @@
 <div id="team-view-bar" style="display:none;padding:8px 24px;background:#0a0f1e;border-bottom:1px solid #1e2a40;font-size:0.82rem;display:none;align-items:center;gap:12px;">
   <span id="team-view-label" style="color:#9ab8d8;font-weight:bold;"></span>
   <button onclick="toggleTeamView(null)" style="background:#1e2a40;border:1px solid #2a3a54;color:#9ab8d8;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:0.75rem;">✕ Both Teams</button>
+</div>
+<div id="rules-section" style="display:none;margin:0;border-bottom:1px solid #1e2a40;">
+  <button id="rules-toggle" onclick="toggleRules()" style="width:100%;background:#0a1220;border:none;border-bottom:1px solid #1e2a40;padding:9px 24px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:8px;color:#c89b3c;font-family:'Cinzel',serif;font-size:0.78rem;letter-spacing:0.06em;">
+    <span id="rules-toggle-icon">▶</span> EVENT RULES
+  </button>
+  <div id="rules-body" style="display:none;padding:16px 24px 20px;background:#080d1a;">
+    <pre id="rules-text" style="white-space:pre-wrap;font-family:'Segoe UI',sans-serif;font-size:0.85rem;line-height:1.7;color:#b0a898;max-width:860px;"></pre>
+  </div>
 </div>
 <div id="status-bar">Select an event to view the board.</div>
 <div class="board-wrapper"><div class="board" id="board"></div></div>

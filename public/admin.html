@@ -152,6 +152,10 @@
         <input type="text" id="edit-t2">
       </div>
     </div>
+    <div class="edit-field" style="margin-top:12px;">
+      <label>Event Rules <span style="font-size:0.72rem;color:#556;font-weight:400;">(shown above the board — plain text, use blank lines to separate sections)</span></label>
+      <textarea id="edit-rules" rows="12" style="width:100%;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:10px;font-family:'Segoe UI',sans-serif;font-size:0.85rem;line-height:1.6;resize:vertical;" placeholder="Paste your event rules here..."></textarea>
+    </div>
     <div style="margin-top:10px;">
       <button class="btn btn-gold" onclick="saveEventEdits()">Save Changes</button>
     </div>
@@ -359,6 +363,7 @@ async function selectEvent(ev) {
   document.getElementById('edit-codeword').value = ev.code_word;
   document.getElementById('edit-t1').value = ev.team1_name;
   document.getElementById('edit-t2').value = ev.team2_name;
+  document.getElementById('edit-rules').value = ev.rules || '';
   document.getElementById('board-event-name').textContent = ev.name;
 
   // Roster labels
@@ -382,12 +387,13 @@ async function saveEventEdits() {
   const code_word = document.getElementById('edit-codeword').value.trim();
   const team1_name = document.getElementById('edit-t1').value.trim();
   const team2_name = document.getElementById('edit-t2').value.trim();
+  const rules = document.getElementById('edit-rules').value;
   if (!name || !code_word) { statusEl.className = 'error-notice'; statusEl.textContent = 'Name and code word required.'; return; }
   try {
     await adminFetch(`/api/admin/events/${selectedEventId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, code_word, team1_name, team2_name })
+      body: JSON.stringify({ name, code_word, team1_name, team2_name, rules })
     });
     statusEl.className = 'save-notice'; statusEl.textContent = 'Saved!';
     document.getElementById('edit-event-name').textContent = name;

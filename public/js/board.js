@@ -192,6 +192,24 @@ function renderBoard(data) {
   }
 
   statusBar.textContent = `${event.name} · ${event.status} · ${tiles.length} tiles`;
+
+  // Rules section
+  const rulesSection = document.getElementById('rules-section');
+  const rulesText = document.getElementById('rules-text');
+  if (event.rules && event.rules.trim()) {
+    rulesText.textContent = event.rules.trim();
+    rulesSection.style.display = '';
+  } else {
+    rulesSection.style.display = 'none';
+  }
+}
+
+function toggleRules() {
+  const body = document.getElementById('rules-body');
+  const icon = document.getElementById('rules-toggle-icon');
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  icon.textContent = open ? '▼' : '▶';
 }
 
 function escHtml(str) {

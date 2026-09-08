@@ -87,8 +87,11 @@ async function init() {
     team1_name TEXT NOT NULL DEFAULT 'Team 1',
     team2_name TEXT NOT NULL DEFAULT 'Team 2',
     status TEXT NOT NULL DEFAULT 'active',
+    rules TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`);
+  // Migration: add rules column to existing databases
+  try { _db.run('ALTER TABLE events ADD COLUMN rules TEXT'); } catch {}
 
   _db.run(`CREATE TABLE IF NOT EXISTS tiles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -29,13 +29,15 @@ module.exports = function makeAdminRouter(broadcast) {
   });
 
   router.patch('/events/:id', (req, res) => {
-    const { status, code_word, team1_name, team2_name } = req.body;
+    const { status, code_word, team1_name, team2_name, name, rules } = req.body;
     const event = db.get('SELECT * FROM events WHERE id = ?', [req.params.id]);
     if (!event) return res.status(404).json({ error: 'Event not found' });
+    if (name) db.run('UPDATE events SET name = ? WHERE id = ?', [name, req.params.id]);
     if (status) db.run('UPDATE events SET status = ? WHERE id = ?', [status, req.params.id]);
     if (code_word) db.run('UPDATE events SET code_word = ? WHERE id = ?', [code_word, req.params.id]);
     if (team1_name) db.run('UPDATE events SET team1_name = ? WHERE id = ?', [team1_name, req.params.id]);
     if (team2_name) db.run('UPDATE events SET team2_name = ? WHERE id = ?', [team2_name, req.params.id]);
+    if (rules !== undefined) db.run('UPDATE events SET rules = ? WHERE id = ?', [rules || null, req.params.id]);
     broadcast(req.params.id);
     res.json({ ok: true });
   });
