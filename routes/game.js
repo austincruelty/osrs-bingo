@@ -132,6 +132,20 @@ module.exports = function makeGameRouter(broadcast) {
     } catch (err) { next(err); }
   });
 
+  router.get('/events/:id/feed', (req, res, next) => {
+    try {
+      const entries = db.all(`
+        SELECT s.player_name, s.team, s.created_at, ti.item_name
+        FROM submissions s
+        JOIN tile_items ti ON ti.id = s.tile_item_id
+        WHERE s.event_id = ? AND s.status = 'approved'
+        ORDER BY s.created_at DESC
+        LIMIT 40
+      `, [req.params.id]);
+      res.json(entries);
+    } catch (err) { next(err); }
+  });
+
   router.post('/events/:id/submit', upload.single('screenshot'), async (req, res) => {
     const { player_name, team, tile_item_id } = req.body;
     const cleanup = () => { if (req.file) try { fs.unlinkSync(req.file.path); } catch {} };

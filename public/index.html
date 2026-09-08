@@ -190,9 +190,68 @@
       letter-spacing: 0.1em;
     }
 
-    /* Board */
-    .board-wrapper { padding: 20px 24px; overflow-x: auto; }
+    /* Board layout */
+    .board-area { display: flex; align-items: flex-start; }
+    .board-wrapper { flex: 1; min-width: 0; padding: 20px 24px; overflow-x: auto; }
     .board { display: grid; gap: 6px; }
+
+    /* Live feed panel */
+    #feed-panel {
+      width: 230px;
+      flex-shrink: 0;
+      background: #080d1a;
+      border-left: 1px solid #1e2a40;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      max-height: 100vh;
+      overflow: hidden;
+    }
+    .feed-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-bottom: 1px solid #1e2a40;
+      font-family: 'Cinzel', serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #c89b3c;
+      letter-spacing: 0.08em;
+      flex-shrink: 0;
+    }
+    .feed-dot {
+      width: 7px; height: 7px;
+      background: #50c878;
+      border-radius: 50%;
+      flex-shrink: 0;
+      animation: feedPulse 2s infinite;
+    }
+    @keyframes feedPulse {
+      0%,100% { box-shadow: 0 0 0 0 #50c87866; }
+      50% { box-shadow: 0 0 0 4px #50c87800; }
+    }
+    #feed-list { flex: 1; overflow-y: auto; }
+    #feed-list::-webkit-scrollbar { width: 4px; }
+    #feed-list::-webkit-scrollbar-track { background: transparent; }
+    #feed-list::-webkit-scrollbar-thumb { background: #1e2a40; border-radius: 2px; }
+    .feed-empty { padding: 20px 14px; font-size: 0.78rem; color: #2a3a54; font-style: italic; }
+    .feed-entry {
+      padding: 9px 12px;
+      border-bottom: 1px solid #0f1525;
+      animation: feedSlide 0.3s ease;
+    }
+    @keyframes feedSlide { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+    .feed-item-row { display: flex; align-items: center; gap: 5px; margin-bottom: 3px; }
+    .feed-sprite { width: 20px; height: 20px; object-fit: contain; image-rendering: pixelated; flex-shrink: 0; }
+    .feed-item-name { font-size: 0.78rem; font-weight: 600; color: #d4cbb8; line-height: 1.2; }
+    .feed-meta { font-size: 0.68rem; color: #556; line-height: 1.4; }
+    .feed-team-t1 { color: #4a7fc1; font-weight: 600; }
+    .feed-team-t2 { color: #c85a1a; font-weight: 600; }
+    .feed-player { color: #8899aa; }
+    .feed-time { font-size: 0.62rem; color: #2a3a54; margin-top: 2px; }
+    @media (max-width: 700px) { #feed-panel { display: none; } }
 
     .tile {
       background: linear-gradient(160deg, #111827, #0d1525);
@@ -505,7 +564,13 @@
 </div>
 
 <div id="status-bar">Select an event to view the board.</div>
-<div class="board-wrapper"><div class="board" id="board"></div></div>
+<div class="board-area">
+  <div class="board-wrapper"><div class="board" id="board"></div></div>
+  <div id="feed-panel">
+    <div class="feed-header"><span class="feed-dot"></span> Live Feed</div>
+    <div id="feed-list"><p class="feed-empty">Select an event to see drops.</p></div>
+  </div>
+</div>
 
 <!-- Submit Modal -->
 <div id="upload-modal">

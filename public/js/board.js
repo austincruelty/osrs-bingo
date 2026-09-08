@@ -49,15 +49,17 @@ eventSelect.addEventListener('change', () => {
     socket.emit('join-event', currentEventId);
     loadBoard();
     loadTilesForModal();
+    loadFeed();
   } else {
     boardEl.innerHTML = '';
     document.getElementById('scoreboard').style.display = 'none';
     document.getElementById('team-view-bar').style.display = 'none';
+    document.getElementById('feed-list').innerHTML = '<p class="feed-empty">Select an event to see drops.</p>';
   }
 });
 
 socket.on('board-update', ({ eventId }) => {
-  if (String(eventId) === String(currentEventId)) loadBoard();
+  if (String(eventId) === String(currentEventId)) { loadBoard(); loadFeed(); }
 });
 
 async function loadBoard() {
@@ -320,5 +322,48 @@ async function submitDrop() {
     statusEl.textContent = 'Network error — please try again.';
   }
 }
+
+// ── Live Feed ───────────────────────────────────────────────
+
+function timeAgo(dateStr) {
+  const d = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z');
+  const s = Math.floor((Date.now() - d) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+async function loadFeed() {
+  if (!currentEventId) return;
+  const res = await fetch(`/api/events/${currentEventId}/feed`);
+  if (!res.ok) return;
+  const entries = await res.json();
+  const list = document.getElementById('feed-list');
+  if (!entries.length) {
+    list.innerHTML = '<p class="feed-empty">No approved drops yet.</p>';
+    return;
+  }
+  const t1name = currentBoard?.event?.team1_name || 'Team 1';
+  const t2name = currentBoard?.event?.team2_name || 'Team 2';
+  list.innerHTML = entries.map(e => {
+    const teamName = e.team === 1 ? t1name : t2name;
+    const teamClass = `feed-team-t${e.team}`;
+    return `<div class="feed-entry">
+      <div class="feed-item-row">
+        <img src="${itemSpriteUrl(e.item_name)}" class="feed-sprite" onerror="this.style.display='none'" alt="">
+        <span class="feed-item-name">${escHtml(e.item_name)}</span>
+      </div>
+      <div class="feed-meta">
+        <span class="${teamClass}">${escHtml(teamName)}</span>
+        <span class="feed-player"> · ${escHtml(e.player_name)}</span>
+      </div>
+      <div class="feed-time">${timeAgo(e.created_at)}</div>
+    </div>`;
+  }).join('');
+}
+
+// Refresh time-ago labels every minute without a full reload
+setInterval(() => { if (currentEventId) loadFeed(); }, 60000);
 
 loadEvents();
