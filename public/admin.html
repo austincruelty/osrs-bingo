@@ -97,6 +97,33 @@
     .section-actions { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
     .save-notice { font-size:0.8rem; color:#50c878; margin-left:8px; }
     .error-notice { font-size:0.8rem; color:#e05050; margin-left:8px; }
+
+    /* Boss sprite palette */
+    .palette-toggle { width:100%; background:#0a1020; border:1px solid #1e2a40; border-radius:4px; padding:7px 12px; text-align:left; cursor:pointer; color:#c89b3c; font-size:0.8rem; letter-spacing:0.05em; display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+    .palette-toggle:hover { border-color:#c89b3c66; }
+    .palette-body { background:#080d1a; border:1px solid #1e2a40; border-radius:4px; padding:10px; margin-bottom:10px; max-height:300px; overflow-y:auto; }
+    .boss-category { margin-bottom:12px; }
+    .boss-cat-title { font-size:0.65rem; color:#4a7fc1; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:6px; padding-bottom:3px; border-bottom:1px solid #1e2a4066; }
+    .boss-sprites-row { display:flex; flex-wrap:wrap; gap:4px; }
+    .boss-sprite { display:flex; flex-direction:column; align-items:center; gap:2px; padding:5px 4px; border-radius:4px; cursor:grab; width:66px; border:1px solid transparent; transition:background 0.15s,border-color 0.15s; user-select:none; }
+    .boss-sprite:hover { background:#111827; border-color:#c89b3c55; }
+    .boss-sprite:active { cursor:grabbing; }
+    .boss-sprite img { width:40px; height:40px; object-fit:contain; image-rendering:pixelated; }
+    .boss-sprite .boss-fallback { width:40px; height:40px; background:#0f1e3a; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#4a7fc1; font-size:1rem; }
+    .boss-sprite span { font-size:0.55rem; color:#9ab8d8; text-align:center; line-height:1.3; word-break:break-word; }
+    .grid-cell.drag-over { border-color:#c89b3c !important; background:#1a2a10 !important; transform:scale(1.03); }
+
+    /* Modal boss picker */
+    .modal-boss-toggle { background:none; border:1px solid #1e2a40; border-radius:4px; width:100%; padding:5px 10px; color:#4a7fc1; font-size:0.75rem; cursor:pointer; text-align:left; margin-top:6px; display:flex; align-items:center; gap:6px; }
+    .modal-boss-toggle:hover { border-color:#4a7fc166; }
+    .modal-boss-picker { background:#080d1a; border:1px solid #1e2a40; border-radius:4px; padding:8px; margin-top:4px; }
+    .modal-boss-search { width:100%; background:#0f1e3a; color:#d4cbb8; border:1px solid #2a3a54; border-radius:4px; padding:5px 8px; font-size:0.8rem; margin-bottom:6px; }
+    .modal-boss-search:focus { outline:none; border-color:#4a7fc1; }
+    .modal-boss-grid { display:flex; flex-wrap:wrap; gap:3px; max-height:160px; overflow-y:auto; }
+    .modal-boss-item { display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px 3px; border-radius:4px; cursor:pointer; width:58px; border:1px solid transparent; }
+    .modal-boss-item:hover { background:#111827; border-color:#c89b3c55; }
+    .modal-boss-item img { width:34px; height:34px; object-fit:contain; image-rendering:pixelated; }
+    .modal-boss-item span { font-size:0.5rem; color:#9ab8d8; text-align:center; line-height:1.3; }
   </style>
 </head>
 <body>
@@ -196,7 +223,13 @@
       <select id="grid-cols" onchange="initGrid()">
         <option value="3">3</option><option value="4">4</option><option value="5" selected>5</option>
       </select>
-      <small style="color:#445;margin-left:4px;">Click any cell to add/edit a tile</small>
+      <small style="color:#445;margin-left:4px;">Click any cell to add/edit a tile. Drag a boss sprite below onto a cell to pre-fill it.</small>
+    </div>
+    <button class="palette-toggle" onclick="togglePalette()">
+      <span id="palette-toggle-icon">▶</span> Boss Sprites
+    </button>
+    <div class="palette-body" id="boss-palette-body" style="display:none">
+      <div id="boss-palette-inner"></div>
     </div>
     <div class="board-grid" id="board-grid"></div>
   </section>
@@ -230,9 +263,16 @@
       <input type="text" id="modal-tile-name" placeholder="e.g. Barrows Armour">
     </div>
     <div class="form-group">
-      <label>Required Items (one per line)</label>
+      <label>Required Items</label>
       <div class="items-list" id="modal-items"></div>
       <button class="btn btn-gray" onclick="addItemRow()" style="font-size:0.8rem;padding:4px 10px;margin-top:4px;">+ Add Item</button>
+      <button class="modal-boss-toggle" onclick="toggleModalBossPicker()">
+        <span id="modal-boss-icon">▶</span> Quick-Add Boss Sprite
+      </button>
+      <div class="modal-boss-picker" id="modal-boss-picker" style="display:none">
+        <input class="modal-boss-search" id="modal-boss-search" placeholder="Search bosses..." oninput="filterModalBosses(this.value)">
+        <div class="modal-boss-grid" id="modal-boss-grid"></div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-gray" onclick="closeTileModal()">Cancel</button>
@@ -500,21 +540,28 @@ function initGrid() {
         ? `<div class="cell-name">${escHtml(tile.tile_name)}</div><div class="cell-items">${(tile.items||[]).map(i => escHtml(i.item_name)).join(', ')}</div>`
         : `<div style="color:#2a3a54;font-size:1.4rem;">+</div>`;
       cell.onclick = () => openTileModal(r, c, tile);
+      cell.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; cell.classList.add('drag-over'); };
+      cell.ondragleave = () => cell.classList.remove('drag-over');
+      cell.ondrop = (e) => { e.preventDefault(); cell.classList.remove('drag-over'); const name = e.dataTransfer.getData('text/plain'); if (name) openTileModal(r, c, tile, name); };
       grid.appendChild(cell);
     }
   }
 }
 
-function openTileModal(row, col, tile) {
+function openTileModal(row, col, tile, droppedBoss = null) {
   editingCell = { row, col, tile };
   document.getElementById('modal-pos').textContent = `row ${row}, col ${col}`;
-  document.getElementById('modal-tile-name').value = tile ? tile.tile_name : '';
+  document.getElementById('modal-tile-name').value = tile ? tile.tile_name : (droppedBoss || '');
   document.getElementById('modal-delete-btn').style.display = tile ? 'inline-block' : 'none';
+  // Reset boss picker
+  document.getElementById('modal-boss-picker').style.display = 'none';
+  document.getElementById('modal-boss-icon').textContent = '▶';
   const itemsList = document.getElementById('modal-items');
   itemsList.innerHTML = '';
   const items = tile?.items?.length ? tile.items : [];
-  if (items.length) items.forEach(item => addItemRow(item.item_name, item.quantity || 1));
-  else addItemRow('');
+  items.forEach(item => addItemRow(item.item_name, item.quantity || 1));
+  if (droppedBoss) addItemRow(droppedBoss);
+  else if (!items.length) addItemRow('');
   document.getElementById('tile-modal').classList.add('open');
 }
 
@@ -620,6 +667,134 @@ function previewImg(src) {
 
 function escHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Boss Sprite Palette ───────────────────────────────────
+
+const BOSSES = [
+  // God Wars Dungeon
+  { name: 'General Graardor',          cat: 'God Wars' },
+  { name: 'Commander Zilyana',         cat: 'God Wars' },
+  { name: "K'ril Tsutsaroth",         cat: 'God Wars' },
+  { name: "Kree'arra",                cat: 'God Wars' },
+  { name: 'Nex',                       cat: 'God Wars' },
+  // Slayer Bosses
+  { name: 'Abyssal Sire',             cat: 'Slayer' },
+  { name: 'Alchemical Hydra',         cat: 'Slayer' },
+  { name: 'Cerberus',                 cat: 'Slayer' },
+  { name: 'Grotesque Guardians',      cat: 'Slayer' },
+  { name: 'Kraken',                   cat: 'Slayer' },
+  { name: 'Skotizo',                  cat: 'Slayer' },
+  { name: 'Thermonuclear Smoke Devil', img: 'Thermonuclear_smoke_devil', cat: 'Slayer' },
+  // Wilderness
+  { name: 'Callisto',            cat: 'Wilderness' },
+  { name: "Calvar'ion",          cat: 'Wilderness' },
+  { name: 'Chaos Elemental',     cat: 'Wilderness' },
+  { name: 'Chaos Fanatic',       img: 'Chaos_fanatic',       cat: 'Wilderness' },
+  { name: 'Crazy Archaeologist', img: 'Crazy_archaeologist', cat: 'Wilderness' },
+  { name: 'King Black Dragon',   cat: 'Wilderness' },
+  { name: 'Scorpia',             cat: 'Wilderness' },
+  { name: 'Spindel',             cat: 'Wilderness' },
+  { name: 'Venenatis',           cat: 'Wilderness' },
+  { name: "Vet'ion",             cat: 'Wilderness' },
+  // Desert Treasure II
+  { name: 'Duke Sucellus',  cat: 'DT II' },
+  { name: 'Leviathan',      img: 'The_Leviathan', cat: 'DT II' },
+  { name: 'Phantom Muspah', cat: 'DT II' },
+  { name: 'Vardorvis',      cat: 'DT II' },
+  { name: 'The Whisperer',  cat: 'DT II' },
+  // Raids
+  { name: 'Great Olm',         cat: 'Raids' },
+  { name: 'Verzik Vitur',      cat: 'Raids' },
+  { name: "Tumeken's Warden",  cat: 'Raids' },
+  { name: 'Corrupted Hunllef', cat: 'Raids' },
+  // Dagannoth Kings
+  { name: 'Dagannoth Prime',   cat: 'Dagannoth Kings' },
+  { name: 'Dagannoth Rex',     cat: 'Dagannoth Kings' },
+  { name: 'Dagannoth Supreme', cat: 'Dagannoth Kings' },
+  // Other
+  { name: 'Artio',                cat: 'Other' },
+  { name: 'Bryophyta',            cat: 'Other' },
+  { name: 'Corporeal Beast',      cat: 'Other' },
+  { name: 'Giant Mole',           cat: 'Other' },
+  { name: 'Kalphite Queen',       cat: 'Other' },
+  { name: 'The Nightmare',        cat: 'Other' },
+  { name: "Phosani's Nightmare",  cat: 'Other' },
+  { name: 'Sarachnis',            cat: 'Other' },
+  { name: 'Tempoross',            cat: 'Other' },
+  { name: 'TzKal-Zuk',           cat: 'Other' },
+  { name: 'TzTok-Jad',           cat: 'Other' },
+  { name: 'Vorkath',              cat: 'Other' },
+  { name: 'Wintertodt',           cat: 'Other' },
+  { name: 'Zulrah',               cat: 'Other' },
+  // New Bosses
+  { name: 'Amoxliatl', cat: 'New' },
+  { name: 'Hueycoatl', cat: 'New' },
+  { name: 'Yama',      cat: 'New' },
+];
+
+function bossImgUrl(boss) {
+  if (boss.img) return `https://oldschool.runescape.wiki/images/${encodeURIComponent(boss.img)}.png`;
+  return itemSpriteUrl(boss.name);
+}
+
+function renderBossPalette() {
+  const container = document.getElementById('boss-palette-inner');
+  if (!container || container.dataset.rendered) return;
+  container.dataset.rendered = '1';
+  const cats = [...new Set(BOSSES.map(b => b.cat))];
+  container.innerHTML = cats.map(cat => {
+    const bosses = BOSSES.filter(b => b.cat === cat);
+    return `<div class="boss-category">
+      <div class="boss-cat-title">${escHtml(cat)}</div>
+      <div class="boss-sprites-row">
+        ${bosses.map(b => `
+          <div class="boss-sprite" draggable="true"
+               ondragstart="bossSpriteDragStart(event,'${escHtml(b.name).replace(/'/g,"\\'")}')">
+            <img src="${bossImgUrl(b)}" alt=""
+                 onerror="this.outerHTML='<div class=\\'boss-fallback\\'>☠</div>'">
+            <span>${escHtml(b.name)}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderModalBossGrid(filter) {
+  const grid = document.getElementById('modal-boss-grid');
+  const q = (filter || '').toLowerCase();
+  const bosses = q ? BOSSES.filter(b => b.name.toLowerCase().includes(q)) : BOSSES;
+  grid.innerHTML = bosses.map(b => `
+    <div class="modal-boss-item" onclick="addItemRow('${escHtml(b.name).replace(/'/g,"\\'")}')">
+      <img src="${bossImgUrl(b)}" alt=""
+           onerror="this.style.display='none'">
+      <span>${escHtml(b.name)}</span>
+    </div>`).join('');
+}
+
+function togglePalette() {
+  const body = document.getElementById('boss-palette-body');
+  const icon = document.getElementById('palette-toggle-icon');
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  icon.textContent = open ? '▼' : '▶';
+  if (open) renderBossPalette();
+}
+
+function toggleModalBossPicker() {
+  const picker = document.getElementById('modal-boss-picker');
+  const icon = document.getElementById('modal-boss-icon');
+  const open = picker.style.display === 'none';
+  picker.style.display = open ? 'block' : 'none';
+  icon.textContent = open ? '▼' : '▶';
+  if (open) { renderModalBossGrid(''); document.getElementById('modal-boss-search').value = ''; }
+}
+
+function filterModalBosses(val) { renderModalBossGrid(val); }
+
+function bossSpriteDragStart(event, bossName) {
+  event.dataTransfer.setData('text/plain', bossName);
+  event.dataTransfer.effectAllowed = 'copy';
 }
 
 checkAuth().then(ok => { if (ok) loadEvents(); });
