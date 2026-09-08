@@ -142,8 +142,12 @@
       <input type="text" id="ev-codeword" placeholder="Code word" style="flex:1;min-width:120px;">
       <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
         <div id="create-teams-list">
-          <input type="text" class="create-team-input" placeholder="Team 1 name" value="Team 1" style="width:100%;margin-bottom:4px;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:6px 10px;">
-          <input type="text" class="create-team-input" placeholder="Team 2 name" value="Team 2" style="width:100%;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:6px 10px;">
+          <div class="create-team-row" style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">
+            <input type="text" class="create-team-input" placeholder="Team 1 name" value="Team 1" style="flex:1;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:6px 10px;">
+          </div>
+          <div class="create-team-row" style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">
+            <input type="text" class="create-team-input" placeholder="Team 2 name" value="Team 2" style="flex:1;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:6px 10px;">
+          </div>
         </div>
         <button type="button" class="btn btn-gray" onclick="addCreateTeam()" style="font-size:0.72rem;padding:3px 8px;align-self:flex-start;">+ Team</button>
       </div>
@@ -347,13 +351,40 @@ async function loadEvents() {
 function addCreateTeam() {
   const list = document.getElementById('create-teams-list');
   const num = list.querySelectorAll('.create-team-input').length + 1;
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.className = 'create-team-input';
-  input.placeholder = `Team ${num} name`;
-  input.value = `Team ${num}`;
-  input.style.cssText = 'width:100%;margin-top:4px;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:6px 10px;';
-  list.appendChild(input);
+  const row = document.createElement('div');
+  row.className = 'create-team-row';
+  row.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:4px;';
+  row.innerHTML = `
+    <input type="text" class="create-team-input" placeholder="Team ${num} name" value="Team ${num}"
+           style="flex:1;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:6px 10px;">
+    <button type="button" class="btn btn-red" onclick="removeCreateTeam(this)" style="font-size:0.72rem;padding:3px 8px;flex-shrink:0;">✕</button>`;
+  list.appendChild(row);
+  updateCreateRemoveButtons();
+}
+
+function removeCreateTeam(btn) {
+  btn.closest('.create-team-row').remove();
+  updateCreateRemoveButtons();
+}
+
+function updateCreateRemoveButtons() {
+  const rows = document.querySelectorAll('#create-teams-list .create-team-row');
+  rows.forEach((row, i) => {
+    const existing = row.querySelector('.btn-red');
+    if (rows.length > 2) {
+      if (!existing) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-red';
+        btn.style.cssText = 'font-size:0.72rem;padding:3px 8px;flex-shrink:0;';
+        btn.textContent = '✕';
+        btn.onclick = function() { removeCreateTeam(this); };
+        row.appendChild(btn);
+      }
+    } else {
+      if (existing) existing.remove();
+    }
+  });
 }
 
 async function submitNewEvent() {
