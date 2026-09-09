@@ -323,10 +323,13 @@ function renderBoard(data) {
           </div>`;
         }).join('');
         return `<div class="tile-group">
-          <div class="tile-group-header">
+          <div class="tile-group-header" onclick="toggleGroup(this)">
+            <span class="group-toggle">▶</span>
             <span class="group-label">${escHtml(group.group_name)}</span>
             <span class="team-dots">${headerDots}</span>
-          </div>${groupItemsHtml}</div>`;
+          </div>
+          <div class="tile-group-items">${groupItemsHtml}</div>
+        </div>`;
       }).join('');
 
       el.innerHTML = `<div class="tile-header">${headerSprite}<span class="tile-name">${escHtml(tile.tile_name)}</span></div>` + itemsHtml + groupsHtml;
@@ -345,6 +348,12 @@ function renderBoard(data) {
   } else {
     rulesSection.style.display = 'none';
   }
+}
+
+function toggleGroup(headerEl) {
+  const group = headerEl.closest('.tile-group');
+  const open = group.classList.toggle('open');
+  headerEl.querySelector('.group-toggle').textContent = open ? '▼' : '▶';
 }
 
 function toggleRules() {
