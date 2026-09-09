@@ -84,7 +84,7 @@ function buildBoard(eventId) {
 
     // Item pools
     const groupRows = db.all('SELECT * FROM tile_item_groups WHERE tile_id = ? ORDER BY display_order', [tile.id]);
-    const groups = groupRows.map(g => {
+    const groups = groupRows.map((g, gIdx) => {
       const gItems = db.all('SELECT * FROM tile_items WHERE group_id = ?', [g.id]);
       const itemsWithCounts = gItems.map(gi => {
         const counts = {};
