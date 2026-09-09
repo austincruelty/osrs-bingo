@@ -16,6 +16,17 @@
       min-height: 100vh;
       background-image: radial-gradient(ellipse at top, #1a2340 0%, #0d0f1a 70%);
     }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: url('/osrs-map.png') center center / cover no-repeat;
+      filter: blur(3px) brightness(0.25);
+      opacity: 0.18;
+      z-index: -1;
+      transform: scale(1.04);
+      pointer-events: none;
+    }
 
     header {
       background: linear-gradient(180deg, #111827 0%, #0d1220 100%);
