@@ -103,7 +103,7 @@ function buildBoard(eventId) {
         totalCounts[team.team_number] = total;
         done[team.team_number] = total >= g.target_count;
       }
-      return { ...g, items: itemsWithCounts, totalCounts, done };
+      return { ...g, items: itemsWithCounts, totalCounts, done, points: Math.min(itemsWithProgress.length + gIdx + 1, 3) };
     });
 
     const complete = {};

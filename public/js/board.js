@@ -325,6 +325,7 @@ function renderBoard(data) {
         return `<div class="tile-group">
           <div class="tile-group-header" onclick="toggleGroup(this)">
             <span class="group-toggle">▶</span>
+            <span class="item-stars">${'★'.repeat(group.points || 1)}</span>
             <span class="group-label">${escHtml(group.group_name)}</span>
             <span class="team-dots">${headerDots}</span>
           </div>
