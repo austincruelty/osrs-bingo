@@ -106,10 +106,13 @@ async function init() {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tile_id INTEGER NOT NULL REFERENCES tiles(id),
     item_name TEXT NOT NULL,
-    quantity INTEGER NOT NULL DEFAULT 1
+    quantity INTEGER NOT NULL DEFAULT 1,
+    wiki_image TEXT
   )`);
   // Migration: add quantity column to existing databases
   try { _db.run('ALTER TABLE tile_items ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1'); } catch {}
+  // Migration: add wiki_image column to existing databases
+  try { _db.run('ALTER TABLE tile_items ADD COLUMN wiki_image TEXT'); } catch {}
 
   _db.run(`CREATE TABLE IF NOT EXISTS submissions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

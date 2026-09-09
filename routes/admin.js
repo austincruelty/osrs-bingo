@@ -105,7 +105,8 @@ module.exports = function makeAdminRouter(broadcast) {
       for (const item of items) {
         const name = (typeof item === 'string' ? item : item.name || '').trim();
         const qty = Math.max(1, parseInt((typeof item === 'object' && item.qty) || 1) || 1);
-        if (name) db.run('INSERT INTO tile_items (tile_id, item_name, quantity) VALUES (?, ?, ?)', [tileId, name, qty]);
+        const wikiImage = (typeof item === 'object' ? (item.wiki_image || '') : '').trim() || null;
+        if (name) db.run('INSERT INTO tile_items (tile_id, item_name, quantity, wiki_image) VALUES (?, ?, ?, ?)', [tileId, name, qty, wikiImage]);
       }
       return tileId;
     });

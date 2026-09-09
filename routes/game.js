@@ -144,7 +144,7 @@ module.exports = function makeGameRouter(broadcast) {
   router.get('/events/:id/feed', (req, res, next) => {
     try {
       const entries = db.all(`
-        SELECT s.player_name, s.team, s.created_at, ti.item_name
+        SELECT s.player_name, s.team, s.created_at, ti.item_name, ti.wiki_image
         FROM submissions s
         JOIN tile_items ti ON ti.id = s.tile_item_id
         WHERE s.event_id = ? AND s.status = 'approved'

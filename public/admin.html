@@ -673,40 +673,51 @@ function openTileModal(row, col, tile, droppedBoss = null) {
   const itemsList = document.getElementById('modal-items');
   itemsList.innerHTML = '';
   const items = tile?.items?.length ? tile.items : [];
-  items.forEach(item => addItemRow(item.item_name, item.quantity || 1));
+  items.forEach(item => addItemRow(item.item_name, item.quantity || 1, item.wiki_image || ''));
   if (droppedBoss) addItemRow(droppedBoss);
   else if (!items.length) addItemRow('');
   document.getElementById('tile-modal').classList.add('open');
 }
 
-function itemSpriteUrl(name) {
+function itemSpriteUrl(name, wikiImage) {
+  if (wikiImage && wikiImage.trim()) {
+    const fn = wikiImage.trim().replace(/\.png$/i, '');
+    return `https://oldschool.runescape.wiki/images/${encodeURIComponent(fn)}.png`;
+  }
   // Strip quantity suffixes like "x5" or "5x" before building wiki URL
-  const clean = name.trim().replace(/\s+x\d+$/i, '').replace(/^\d+x\s+/i, '').trim();
+  const clean = (name || '').trim().replace(/\s+x\d+$/i, '').replace(/^\d+x\s+/i, '').trim();
   const wikiName = clean.charAt(0).toUpperCase() + clean.slice(1).replace(/ /g, '_');
   return `https://oldschool.runescape.wiki/images/${encodeURIComponent(wikiName)}.png`;
 }
 
-function addItemRow(value = '', qty = 1) {
+function addItemRow(value = '', qty = 1, wikiImage = '') {
   const row = document.createElement('div');
   row.className = 'item-row';
-  row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px;';
-  const spriteUrl = value ? itemSpriteUrl(value) : '';
+  row.style.cssText = 'display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;';
+  const spriteUrl = value ? itemSpriteUrl(value, wikiImage) : '';
   row.innerHTML = `
-    <img src="${escHtml(spriteUrl)}" style="width:24px;height:24px;object-fit:contain;image-rendering:pixelated;flex-shrink:0;${value ? '' : 'display:none'}" onerror="this.style.display='none'" alt="">
-    <input type="text" class="item-name-input" placeholder="Item name" value="${escHtml(value)}" style="flex:1;">
-    <input type="number" class="item-qty-input" min="1" max="99" value="${parseInt(qty)||1}" title="Required quantity" style="width:52px;text-align:center;">
-    <button class="btn btn-gray" onclick="this.parentElement.remove()" style="padding:4px 8px;flex-shrink:0;">✕</button>`;
+    <img src="${escHtml(spriteUrl)}" style="width:24px;height:24px;object-fit:contain;image-rendering:pixelated;flex-shrink:0;margin-top:7px;${value ? '' : 'display:none'}" onerror="this.style.display='none'" alt="">
+    <div style="display:flex;flex-direction:column;flex:1;gap:3px;">
+      <input type="text" class="item-name-input" placeholder="Item name" value="${escHtml(value)}" style="width:100%;">
+      <input type="text" class="item-wiki-input" placeholder="Wiki filename override (optional — e.g. Soulflame_horn)" value="${escHtml(wikiImage)}" style="width:100%;font-size:0.72rem;color:#667;background:#080d1a;border-color:#1a2030;" title="Leave blank to auto-generate from item name. Enter the OSRS Wiki image filename (without .png) if the sprite doesn't load.">
+    </div>
+    <input type="number" class="item-qty-input" min="1" max="99" value="${parseInt(qty)||1}" title="Required quantity" style="width:52px;text-align:center;flex-shrink:0;">
+    <button class="btn btn-gray" onclick="this.closest('.item-row').remove()" style="padding:4px 8px;flex-shrink:0;margin-top:2px;">✕</button>`;
   const img = row.querySelector('img');
   const nameInput = row.querySelector('.item-name-input');
+  const wikiInput = row.querySelector('.item-wiki-input');
   let debounce;
-  nameInput.addEventListener('input', () => {
+  const updateSprite = () => {
     clearTimeout(debounce);
     debounce = setTimeout(() => {
       const name = nameInput.value.trim();
-      if (name) { img.src = itemSpriteUrl(name); img.style.display = ''; }
+      const wiki = wikiInput.value.trim();
+      if (name || wiki) { img.src = itemSpriteUrl(name, wiki); img.style.display = ''; }
       else img.style.display = 'none';
     }, 400);
-  });
+  };
+  nameInput.addEventListener('input', updateSprite);
+  wikiInput.addEventListener('input', updateSprite);
   document.getElementById('modal-items').appendChild(row);
 }
 
@@ -718,7 +729,8 @@ async function saveTile() {
   const items = Array.from(document.querySelectorAll('#modal-items .item-row'))
     .map(row => ({
       name: row.querySelector('.item-name-input').value.trim(),
-      qty: parseInt(row.querySelector('.item-qty-input').value) || 1
+      qty: parseInt(row.querySelector('.item-qty-input').value) || 1,
+      wiki_image: (row.querySelector('.item-wiki-input')?.value || '').trim()
     }))
     .filter(i => i.name);
   if (!tileName) { alert('Tile name required.'); return; }

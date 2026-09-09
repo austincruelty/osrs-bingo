@@ -220,7 +220,7 @@ function renderBoard(data) {
         const isDoneForSelected = selectedTeam !== null && item.done && item.done[selectedTeam];
         return `
           <div class="tile-item${isDoneForSelected ? ' item-done' : ''}">
-            <img src="${itemSpriteUrl(item.item_name)}" class="item-sprite" onerror="this.style.display='none'" alt="">
+            <img src="${itemSpriteUrl(item.item_name, item.wiki_image)}" class="item-sprite" onerror="this.style.display='none'" alt="">
             <span class="item-stars">${escHtml(stars)}</span>
             <span class="tile-item-name">${escHtml(item.item_name)}</span>
             <span class="team-dots">${progressHtml}</span>
@@ -257,7 +257,11 @@ function escHtml(str) {
   return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function itemSpriteUrl(itemName) {
+function itemSpriteUrl(itemName, wikiImage) {
+  if (wikiImage && wikiImage.trim()) {
+    const fn = wikiImage.trim().replace(/\.png$/i, '');
+    return `https://oldschool.runescape.wiki/images/${encodeURIComponent(fn)}.png`;
+  }
   const clean = (itemName || '').trim().replace(/\s+x\d+$/i, '').replace(/^\d+x\s+/i, '').trim();
   const wikiName = clean.charAt(0).toUpperCase() + clean.slice(1).replace(/ /g, '_');
   return `https://oldschool.runescape.wiki/images/${encodeURIComponent(wikiName)}.png`;
@@ -276,7 +280,7 @@ function allBoardItems() {
   const items = [];
   tilesData.forEach(tile => {
     (tile.items || []).forEach(item => {
-      items.push({ id: item.id, item_name: item.item_name, tile_name: tile.tile_name });
+      items.push({ id: item.id, item_name: item.item_name, tile_name: tile.tile_name, wiki_image: item.wiki_image });
     });
   });
   return items;
@@ -296,7 +300,7 @@ function itemSearch(query) {
     div.className = 'item-suggestion';
     div.innerHTML = `
       <span class="item-suggestion-name">
-        <img src="${itemSpriteUrl(item.item_name)}" style="width:18px;height:18px;object-fit:contain;image-rendering:pixelated;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'" alt="">
+        <img src="${itemSpriteUrl(item.item_name, item.wiki_image)}" style="width:18px;height:18px;object-fit:contain;image-rendering:pixelated;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'" alt="">
         ${escHtml(item.item_name)}
       </span>
       <span class="item-suggestion-tile">${escHtml(item.tile_name)}</span>`;
@@ -437,7 +441,7 @@ async function loadFeed() {
     const color = teamColor(e.team);
     return `<div class="feed-entry">
       <div class="feed-item-row">
-        <img src="${itemSpriteUrl(e.item_name)}" class="feed-sprite" onerror="this.style.display='none'" alt="">
+        <img src="${itemSpriteUrl(e.item_name, e.wiki_image)}" class="feed-sprite" onerror="this.style.display='none'" alt="">
         <span class="feed-item-name">${escHtml(e.item_name)}</span>
       </div>
       <div class="feed-meta">
