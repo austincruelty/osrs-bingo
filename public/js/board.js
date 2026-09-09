@@ -300,7 +300,36 @@ function renderBoard(data) {
           </div>`;
       }).join('');
 
-      el.innerHTML = `<div class="tile-header">${headerSprite}<span class="tile-name">${escHtml(tile.tile_name)}</span></div>` + itemsHtml;
+      const groupsHtml = (tile.groups || []).map(group => {
+        let headerDots = '';
+        for (const team of teamsToShow) {
+          const color = teamColor(team.team_number);
+          const cnt = Math.min(group.totalCounts[team.team_number] || 0, group.target_count);
+          const isDone = group.done && group.done[team.team_number];
+          headerDots += `<span class="qty-progress" style="color:${color};border:1px solid ${color}55;${isDone ? 'opacity:0.5;' : ''}">${cnt}/${group.target_count}</span>`;
+        }
+        const groupItemsHtml = (group.items || []).map(item => {
+          let dots = '';
+          for (const team of teamsToShow) {
+            const color = teamColor(team.team_number);
+            const got = (item.counts && item.counts[team.team_number] > 0);
+            dots += `<span class="dot" style="${got ? `background:${color};border-color:${color};box-shadow:0 0 4px ${color}88` : ''}"></span>`;
+          }
+          const isDoneForSelected = selectedTeam !== null && item.counts && item.counts[selectedTeam] > 0;
+          return `<div class="tile-item${isDoneForSelected ? ' item-done' : ''}">
+            <img src="${itemSpriteUrl(item.item_name, item.wiki_image)}" class="item-sprite" onerror="this.style.display='none'" alt="">
+            <span class="tile-item-name">${escHtml(item.item_name)}</span>
+            <span class="team-dots">${dots}</span>
+          </div>`;
+        }).join('');
+        return `<div class="tile-group">
+          <div class="tile-group-header">
+            <span class="group-label">${escHtml(group.group_name)}</span>
+            <span class="team-dots">${headerDots}</span>
+          </div>${groupItemsHtml}</div>`;
+      }).join('');
+
+      el.innerHTML = `<div class="tile-header">${headerSprite}<span class="tile-name">${escHtml(tile.tile_name)}</span></div>` + itemsHtml + groupsHtml;
       boardEl.appendChild(el);
     }
   }
@@ -354,6 +383,11 @@ function allBoardItems() {
   tilesData.forEach(tile => {
     (tile.items || []).forEach(item => {
       items.push({ id: item.id, item_name: item.item_name, tile_name: tile.tile_name, wiki_image: item.wiki_image });
+    });
+    (tile.groups || []).forEach(group => {
+      (group.items || []).forEach(item => {
+        items.push({ id: item.id, item_name: item.item_name, tile_name: `${tile.tile_name} · ${group.group_name}`, wiki_image: item.wiki_image });
+      });
     });
   });
   return items;

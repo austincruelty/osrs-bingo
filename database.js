@@ -107,12 +107,21 @@ async function init() {
     tile_id INTEGER NOT NULL REFERENCES tiles(id),
     item_name TEXT NOT NULL,
     quantity INTEGER NOT NULL DEFAULT 1,
-    wiki_image TEXT
+    wiki_image TEXT,
+    group_id INTEGER
   )`);
-  // Migration: add quantity column to existing databases
+  // Migrations
   try { _db.run('ALTER TABLE tile_items ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1'); } catch {}
-  // Migration: add wiki_image column to existing databases
   try { _db.run('ALTER TABLE tile_items ADD COLUMN wiki_image TEXT'); } catch {}
+  try { _db.run('ALTER TABLE tile_items ADD COLUMN group_id INTEGER'); } catch {}
+
+  _db.run(`CREATE TABLE IF NOT EXISTS tile_item_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tile_id INTEGER NOT NULL REFERENCES tiles(id),
+    group_name TEXT NOT NULL,
+    target_count INTEGER NOT NULL DEFAULT 1,
+    display_order INTEGER NOT NULL DEFAULT 0
+  )`);
 
   _db.run(`CREATE TABLE IF NOT EXISTS submissions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

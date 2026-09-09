@@ -87,80 +87,129 @@ module.exports = function makeAdminRouter(broadcast) {
   // ── Tiles ────────────────────────────────────────────────
 
   router.post('/events/:id/tiles', (req, res) => {
-    const { row, col, tile_name, items } = req.body;
-    if (row === undefined || col === undefined || !tile_name || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'row, col, tile_name, and items[] required' });
+    const { row, col, tile_name, items = [], groups = [] } = req.body;
+    if (row === undefined || col === undefined || !tile_name) {
+      return res.status(400).json({ error: 'row, col, and tile_name required' });
+    }
+    if (!items.length && !groups.length) {
+      return res.status(400).json({ error: 'At least one item or pool required' });
     }
 
-    const saveTile = db.transaction((eventId, row, col, tile_name, items) => {
+    const saveTile = db.transaction((eventId, row, col, tile_name, items, groups) => {
       const existing = db.get('SELECT id FROM tiles WHERE event_id = ? AND row = ? AND col = ?', [eventId, row, col]);
-
       let tileId;
+
       if (existing) {
-        // Update in-place so submissions keep referencing the same tile/item IDs
         tileId = existing.id;
         db.run('UPDATE tiles SET tile_name = ? WHERE id = ?', [tile_name, tileId]);
 
-        const existingItems = db.all('SELECT id FROM tile_items WHERE tile_id = ?', [tileId]);
-        const existingIds = new Set(existingItems.map(i => i.id));
-        const keptIds = new Set(items.filter(i => i.id).map(i => Number(i.id)));
+        // ── Individual items (group_id IS NULL) ──────────────────
+        const exItems = db.all('SELECT id FROM tile_items WHERE tile_id = ? AND group_id IS NULL', [tileId]);
+        const exItemIds = new Set(exItems.map(i => i.id));
+        const keptItemIds = new Set(items.filter(i => i.id).map(i => Number(i.id)));
+        for (const ex of exItems) {
+          if (!keptItemIds.has(ex.id)) {
+            const hs = db.get('SELECT COUNT(*) as c FROM submissions WHERE tile_item_id = ?', [ex.id]);
+            if (!(hs && hs.c > 0)) db.run('DELETE FROM tile_items WHERE id = ?', [ex.id]);
+          }
+        }
+        for (const item of items) {
+          const name = (item.name || '').trim();
+          const qty = Math.max(1, parseInt(item.qty) || 1);
+          const wiki = (item.wiki_image || '').trim() || null;
+          if (!name) continue;
+          if (item.id && exItemIds.has(Number(item.id))) {
+            db.run('UPDATE tile_items SET item_name = ?, quantity = ?, wiki_image = ? WHERE id = ?', [name, qty, wiki, Number(item.id)]);
+          } else {
+            db.run('INSERT INTO tile_items (tile_id, item_name, quantity, wiki_image) VALUES (?, ?, ?, ?)', [tileId, name, qty, wiki]);
+          }
+        }
 
-        // Remove items that were deleted from the form, but only if no submissions reference them
-        for (const ex of existingItems) {
-          if (!keptIds.has(ex.id)) {
-            const hasSubs = db.get('SELECT COUNT(*) as c FROM submissions WHERE tile_item_id = ?', [ex.id]);
-            if (!(hasSubs && hasSubs.c > 0)) {
-              db.run('DELETE FROM tile_items WHERE id = ?', [ex.id]);
+        // ── Groups ───────────────────────────────────────────────
+        const exGroups = db.all('SELECT id FROM tile_item_groups WHERE tile_id = ?', [tileId]);
+        const exGroupIds = new Set(exGroups.map(g => g.id));
+        const keptGroupIds = new Set(groups.filter(g => g.id).map(g => Number(g.id)));
+        for (const eg of exGroups) {
+          if (!keptGroupIds.has(eg.id)) {
+            const gItems = db.all('SELECT id FROM tile_items WHERE group_id = ?', [eg.id]);
+            let safe = true;
+            for (const gi of gItems) {
+              const hs = db.get('SELECT COUNT(*) as c FROM submissions WHERE tile_item_id = ?', [gi.id]);
+              if (hs && hs.c > 0) { safe = false; break; }
+            }
+            if (safe) {
+              db.run('DELETE FROM tile_items WHERE group_id = ?', [eg.id]);
+              db.run('DELETE FROM tile_item_groups WHERE id = ?', [eg.id]);
             }
           }
         }
-
-        // Update existing items or insert new ones
-        for (const item of items) {
-          const name = (typeof item === 'string' ? item : item.name || '').trim();
-          const qty = Math.max(1, parseInt((typeof item === 'object' && item.qty) || 1) || 1);
-          const wikiImage = (typeof item === 'object' ? (item.wiki_image || '') : '').trim() || null;
-          if (!name) continue;
-          if (item.id && existingIds.has(Number(item.id))) {
-            db.run('UPDATE tile_items SET item_name = ?, quantity = ?, wiki_image = ? WHERE id = ?',
-              [name, qty, wikiImage, Number(item.id)]);
+        groups.forEach((g, gIdx) => {
+          let groupId;
+          if (g.id && exGroupIds.has(Number(g.id))) {
+            groupId = Number(g.id);
+            db.run('UPDATE tile_item_groups SET group_name = ?, target_count = ?, display_order = ? WHERE id = ?',
+              [g.group_name, g.target_count, gIdx, groupId]);
           } else {
-            db.run('INSERT INTO tile_items (tile_id, item_name, quantity, wiki_image) VALUES (?, ?, ?, ?)',
-              [tileId, name, qty, wikiImage]);
+            const r = db.run('INSERT INTO tile_item_groups (tile_id, group_name, target_count, display_order) VALUES (?, ?, ?, ?)',
+              [tileId, g.group_name, g.target_count, gIdx]);
+            groupId = r.lastInsertRowid;
           }
-        }
-      } else {
-        // New tile
-        const { lastInsertRowid } = db.run(
-          'INSERT INTO tiles (event_id, row, col, tile_name) VALUES (?, ?, ?, ?)',
-          [eventId, row, col, tile_name]
-        );
-        tileId = lastInsertRowid;
-        for (const item of items) {
-          const name = (typeof item === 'string' ? item : item.name || '').trim();
-          const qty = Math.max(1, parseInt((typeof item === 'object' && item.qty) || 1) || 1);
-          const wikiImage = (typeof item === 'object' ? (item.wiki_image || '') : '').trim() || null;
-          if (name) db.run('INSERT INTO tile_items (tile_id, item_name, quantity, wiki_image) VALUES (?, ?, ?, ?)',
-            [tileId, name, qty, wikiImage]);
-        }
-      }
+          const exGI = db.all('SELECT id FROM tile_items WHERE group_id = ?', [groupId]);
+          const exGIIds = new Set(exGI.map(i => i.id));
+          const keptGIIds = new Set(g.items.filter(i => i.id).map(i => Number(i.id)));
+          for (const ex of exGI) {
+            if (!keptGIIds.has(ex.id)) {
+              const hs = db.get('SELECT COUNT(*) as c FROM submissions WHERE tile_item_id = ?', [ex.id]);
+              if (!(hs && hs.c > 0)) db.run('DELETE FROM tile_items WHERE id = ?', [ex.id]);
+            }
+          }
+          for (const item of g.items) {
+            const name = (item.name || '').trim();
+            const wiki = (item.wiki_image || '').trim() || null;
+            if (!name) continue;
+            if (item.id && exGIIds.has(Number(item.id))) {
+              db.run('UPDATE tile_items SET item_name = ?, wiki_image = ?, group_id = ? WHERE id = ?', [name, wiki, groupId, Number(item.id)]);
+            } else {
+              db.run('INSERT INTO tile_items (tile_id, item_name, quantity, wiki_image, group_id) VALUES (?, ?, 1, ?, ?)', [tileId, name, wiki, groupId]);
+            }
+          }
+        });
 
+      } else {
+        const r = db.run('INSERT INTO tiles (event_id, row, col, tile_name) VALUES (?, ?, ?, ?)', [eventId, row, col, tile_name]);
+        tileId = r.lastInsertRowid;
+        for (const item of items) {
+          const name = (item.name || '').trim();
+          const qty = Math.max(1, parseInt(item.qty) || 1);
+          const wiki = (item.wiki_image || '').trim() || null;
+          if (name) db.run('INSERT INTO tile_items (tile_id, item_name, quantity, wiki_image) VALUES (?, ?, ?, ?)', [tileId, name, qty, wiki]);
+        }
+        groups.forEach((g, gIdx) => {
+          const r = db.run('INSERT INTO tile_item_groups (tile_id, group_name, target_count, display_order) VALUES (?, ?, ?, ?)',
+            [tileId, g.group_name, g.target_count, gIdx]);
+          const groupId = r.lastInsertRowid;
+          for (const item of g.items) {
+            const name = (item.name || '').trim();
+            const wiki = (item.wiki_image || '').trim() || null;
+            if (name) db.run('INSERT INTO tile_items (tile_id, item_name, quantity, wiki_image, group_id) VALUES (?, ?, 1, ?, ?)', [tileId, name, wiki, groupId]);
+          }
+        });
+      }
       return tileId;
     });
 
-    const tileId = saveTile(req.params.id, row, col, tile_name, items);
+    const tileId = saveTile(req.params.id, row, col, tile_name, items, groups);
     broadcast(req.params.id);
     res.json({ tileId });
   });
 
   router.delete('/events/:id/tiles/:tileId', (req, res) => {
-    const hasSubs = db.get(
-      'SELECT COUNT(*) as c FROM submissions WHERE tile_id = ?', [req.params.tileId]
-    );
+    const hasSubs = db.get('SELECT COUNT(*) as c FROM submissions WHERE tile_id = ?', [req.params.tileId]);
     if (hasSubs && hasSubs.c > 0) {
       return res.status(400).json({ error: 'Cannot delete a tile that has submissions. Remove the submissions first.' });
     }
     db.run('DELETE FROM tile_items WHERE tile_id = ?', [req.params.tileId]);
+    db.run('DELETE FROM tile_item_groups WHERE tile_id = ?', [req.params.tileId]);
     db.run('DELETE FROM tiles WHERE id = ?', [req.params.tileId]);
     broadcast(req.params.id);
     res.json({ ok: true });
@@ -197,11 +246,12 @@ module.exports = function makeAdminRouter(broadcast) {
 
   router.get('/events/:id/submissions', (req, res) => {
     const subs = db.all(`
-      SELECT s.*, t.tile_name, ti.item_name,
+      SELECT s.*, t.tile_name, ti.item_name, tig.group_name,
              et.team_name
       FROM submissions s
       JOIN tiles t ON t.id = s.tile_id
       JOIN tile_items ti ON ti.id = s.tile_item_id
+      LEFT JOIN tile_item_groups tig ON tig.id = ti.group_id
       LEFT JOIN event_teams et ON et.event_id = s.event_id AND et.team_number = s.team
       WHERE s.event_id = ?
       ORDER BY s.created_at DESC

@@ -115,6 +115,20 @@
     .boss-sprite span { font-size:0.55rem; color:#9ab8d8; text-align:center; line-height:1.3; word-break:break-word; }
     .grid-cell.drag-over { border-color:#c89b3c !important; background:#1a2a10 !important; transform:scale(1.03); }
 
+    /* Item pool editor */
+    .pool-row { background:#080d1a; border:1px solid #1e2a40; border-radius:5px; padding:10px; margin-bottom:8px; }
+    .pool-header { display:flex; gap:6px; align-items:center; margin-bottom:8px; }
+    .pool-header input[type=text] { flex:1; }
+    .pool-header input[type=number] { width:50px; text-align:center; flex-shrink:0; }
+    .pool-header .pool-needed { font-size:0.72rem; color:#556; flex-shrink:0; }
+    .pool-items { display:flex; flex-direction:column; gap:4px; margin-bottom:6px; }
+    .pool-item-row { display:flex; align-items:center; gap:5px; }
+    .pool-item-row input[type=text]:first-of-type { flex:1; }
+    .pool-item-row input[type=text]:last-of-type { flex:1; font-size:0.72rem; color:#667; background:#080d1a; border-color:#1a2030; }
+    .pool-item-remove { background:none; border:none; color:#7a2020; cursor:pointer; font-size:0.95rem; padding:0 4px; flex-shrink:0; }
+    .pool-item-remove:hover { color:#c03030; }
+    .pool-divider { border:none; border-top:1px solid #1e2a40; margin:12px 0 8px; }
+
     /* Modal boss picker */
     .modal-boss-toggle { background:none; border:1px solid #1e2a40; border-radius:4px; width:100%; padding:5px 10px; color:#4a7fc1; font-size:0.75rem; cursor:pointer; text-align:left; margin-top:6px; display:flex; align-items:center; gap:6px; }
     .modal-boss-toggle:hover { border-color:#4a7fc166; }
@@ -264,6 +278,12 @@
         <input class="modal-boss-search" id="modal-boss-search" placeholder="Search bosses..." oninput="filterModalBosses(this.value)">
         <div class="modal-boss-grid" id="modal-boss-grid"></div>
       </div>
+    </div>
+    <hr class="pool-divider">
+    <div class="form-group">
+      <label>Item Pools <small style="color:#445;font-weight:400;text-transform:none;letter-spacing:0;">(any N different drops from a pool count)</small></label>
+      <div id="modal-pools"></div>
+      <button class="btn btn-gray" onclick="addPoolRow()" style="font-size:0.8rem;padding:4px 10px;margin-top:4px;">+ Add Pool</button>
     </div>
     <div class="modal-actions">
       <button class="btn btn-gray" onclick="closeTileModal()">Cancel</button>
@@ -652,7 +672,12 @@ function initGrid() {
       const cell = document.createElement('div');
       cell.className = 'grid-cell' + (tile ? ' filled' : '');
       cell.innerHTML = tile
-        ? `<img src="${itemSpriteUrl(tile.tile_name)}" style="width:28px;height:28px;object-fit:contain;image-rendering:pixelated;" onerror="this.style.display='none'" alt=""><div class="cell-name">${escHtml(tile.tile_name)}</div><div class="cell-items">${(tile.items||[]).map(i => escHtml(i.item_name)).join(', ')}</div>`
+        ? `<img src="${itemSpriteUrl(tile.tile_name)}" style="width:28px;height:28px;object-fit:contain;image-rendering:pixelated;" onerror="this.style.display='none'" alt="">
+           <div class="cell-name">${escHtml(tile.tile_name)}</div>
+           <div class="cell-items">${[
+             ...(tile.items||[]).map(i => escHtml(i.item_name)),
+             ...(tile.groups||[]).map(g => `<span style="color:#4a7fc1;">[${g.target_count}× ${escHtml(g.group_name)}]</span>`)
+           ].join(', ')}</div>`
         : `<div style="color:#2a3a54;font-size:1.4rem;">+</div>`;
       cell.onclick = () => openTileModal(r, c, tile);
       cell.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; cell.classList.add('drag-over'); };
@@ -673,10 +698,12 @@ function openTileModal(row, col, tile, droppedBoss = null) {
   document.getElementById('modal-boss-icon').textContent = '▶';
   const itemsList = document.getElementById('modal-items');
   itemsList.innerHTML = '';
+  document.getElementById('modal-pools').innerHTML = '';
   const items = tile?.items?.length ? tile.items : [];
   items.forEach(item => addItemRow(item.item_name, item.quantity || 1, item.wiki_image || '', item.id));
   if (droppedBoss) addItemRow(droppedBoss);
-  else if (!items.length) addItemRow('');
+  else if (!items.length && !(tile?.groups?.length)) addItemRow('');
+  (tile?.groups || []).forEach(g => addPoolRow(g));
   document.getElementById('tile-modal').classList.add('open');
 }
 
@@ -725,6 +752,56 @@ function addItemRow(value = '', qty = 1, wikiImage = '', itemId = null) {
 
 function closeTileModal() { document.getElementById('tile-modal').classList.remove('open'); }
 
+function addPoolRow(groupData = null) {
+  const container = document.getElementById('modal-pools');
+  const div = document.createElement('div');
+  div.className = 'pool-row';
+  if (groupData?.id) div.dataset.groupId = groupData.id;
+  div.innerHTML = `
+    <div class="pool-header">
+      <input type="text" class="pool-name-input" placeholder="Pool name (e.g. Unique Weapons)" value="${escHtml(groupData?.group_name || '')}">
+      <input type="number" class="pool-target-input" min="1" max="99" value="${groupData?.target_count || 1}" title="How many from this pool are needed">
+      <span class="pool-needed">needed</span>
+      <button class="btn btn-red" onclick="this.closest('.pool-row').remove()" style="font-size:0.72rem;padding:3px 8px;flex-shrink:0;">✕</button>
+    </div>
+    <div class="pool-items"></div>
+    <button class="btn btn-gray" onclick="addPoolItemRow(this.previousElementSibling)" style="font-size:0.75rem;padding:3px 8px;">+ Add Item</button>`;
+  const itemsContainer = div.querySelector('.pool-items');
+  if (groupData?.items?.length) {
+    groupData.items.forEach(item => addPoolItemRow(itemsContainer, item.item_name, item.wiki_image, item.id));
+  } else {
+    addPoolItemRow(itemsContainer);
+  }
+  container.appendChild(div);
+}
+
+function addPoolItemRow(container, value = '', wikiImage = '', itemId = null) {
+  const row = document.createElement('div');
+  row.className = 'pool-item-row';
+  if (itemId) row.dataset.itemId = itemId;
+  const spriteUrl = value ? itemSpriteUrl(value, wikiImage) : '';
+  row.innerHTML = `
+    <img src="${escHtml(spriteUrl)}" style="width:20px;height:20px;object-fit:contain;image-rendering:pixelated;flex-shrink:0;${value ? '' : 'display:none'}" onerror="this.style.display='none'" alt="">
+    <input type="text" class="pool-item-name" placeholder="Item name" value="${escHtml(value)}">
+    <input type="text" class="pool-item-wiki" placeholder="Wiki filename (optional)" value="${escHtml(wikiImage)}">
+    <button class="pool-item-remove" onclick="this.closest('.pool-item-row').remove()">✕</button>`;
+  const img = row.querySelector('img');
+  const nameIn = row.querySelector('.pool-item-name');
+  const wikiIn = row.querySelector('.pool-item-wiki');
+  let t;
+  const update = () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const n = nameIn.value.trim(), w = wikiIn.value.trim();
+      if (n || w) { img.src = itemSpriteUrl(n, w); img.style.display = ''; }
+      else img.style.display = 'none';
+    }, 400);
+  };
+  nameIn.addEventListener('input', update);
+  wikiIn.addEventListener('input', update);
+  container.appendChild(row);
+}
+
 async function saveTile() {
   const { row, col } = editingCell;
   const tileName = document.getElementById('modal-tile-name').value.trim();
@@ -736,13 +813,27 @@ async function saveTile() {
       wiki_image: (row.querySelector('.item-wiki-input')?.value || '').trim()
     }))
     .filter(i => i.name);
+  const groups = Array.from(document.querySelectorAll('#modal-pools .pool-row'))
+    .map(div => ({
+      id: div.dataset.groupId ? parseInt(div.dataset.groupId) : null,
+      group_name: div.querySelector('.pool-name-input').value.trim(),
+      target_count: parseInt(div.querySelector('.pool-target-input').value) || 1,
+      items: Array.from(div.querySelectorAll('.pool-item-row'))
+        .map(r => ({
+          id: r.dataset.itemId ? parseInt(r.dataset.itemId) : null,
+          name: r.querySelector('.pool-item-name').value.trim(),
+          wiki_image: (r.querySelector('.pool-item-wiki')?.value || '').trim()
+        }))
+        .filter(i => i.name)
+    }))
+    .filter(g => g.group_name && g.items.length);
   if (!tileName) { alert('Tile name required.'); return; }
-  if (!items.length) { alert('At least one item required.'); return; }
+  if (!items.length && !groups.length) { alert('At least one item or pool required.'); return; }
   try {
     const res = await adminFetch(`/api/admin/events/${selectedEventId}/tiles`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ row, col, tile_name: tileName, items })
+      body: JSON.stringify({ row, col, tile_name: tileName, items, groups })
     });
     const data = await res.json();
     if (!data.tileId) { alert(data.error || 'Save failed.'); return; }
@@ -779,7 +870,7 @@ async function loadSubmissions() {
             <td>${escHtml(s.player_name)}</td>
             <td>${escHtml(s.team_name || `Team ${s.team}`)}</td>
             <td>${escHtml(s.tile_name)}</td>
-            <td>${escHtml(s.item_name)}</td>
+            <td>${escHtml(s.item_name)}${s.group_name ? `<br><small style="color:#4a7fc1;font-size:0.65rem;">${escHtml(s.group_name)}</small>` : ''}</td>
             <td><img src="/${escHtml(s.screenshot_path)}" onclick="previewImg(this.src)" alt="screenshot"></td>
             <td><span class="sub-${s.status}">${s.status}</span></td>
             <td style="font-size:0.75rem;color:#556;">${new Date(s.created_at + 'Z').toLocaleString()}</td>

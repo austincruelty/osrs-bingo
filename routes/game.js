@@ -64,7 +64,8 @@ function buildBoard(eventId) {
   const tiles = db.all('SELECT * FROM tiles WHERE event_id = ? ORDER BY row, col', [eventId]);
 
   const boardTiles = tiles.map(tile => {
-    const items = db.all('SELECT * FROM tile_items WHERE tile_id = ?', [tile.id]);
+    // Individual items (not in a pool)
+    const items = db.all('SELECT * FROM tile_items WHERE tile_id = ? AND group_id IS NULL', [tile.id]);
     const itemsWithProgress = items.map((item, idx) => {
       const points = Math.min(idx + 1, 3);
       const qty = item.quantity || 1;
@@ -81,13 +82,38 @@ function buildBoard(eventId) {
       return { ...item, points, quantity: qty, counts, done };
     });
 
+    // Item pools
+    const groupRows = db.all('SELECT * FROM tile_item_groups WHERE tile_id = ? ORDER BY display_order', [tile.id]);
+    const groups = groupRows.map(g => {
+      const gItems = db.all('SELECT * FROM tile_items WHERE group_id = ?', [g.id]);
+      const itemsWithCounts = gItems.map(gi => {
+        const counts = {};
+        for (const team of teams) {
+          const row = db.get(
+            "SELECT COUNT(*) as c FROM submissions WHERE tile_item_id = ? AND team = ? AND status = 'approved'",
+            [gi.id, team.team_number]
+          );
+          counts[team.team_number] = row ? row.c : 0;
+        }
+        return { ...gi, counts };
+      });
+      const totalCounts = {}, done = {};
+      for (const team of teams) {
+        const total = itemsWithCounts.reduce((sum, gi) => sum + (gi.counts[team.team_number] || 0), 0);
+        totalCounts[team.team_number] = total;
+        done[team.team_number] = total >= g.target_count;
+      }
+      return { ...g, items: itemsWithCounts, totalCounts, done };
+    });
+
     const complete = {};
     for (const team of teams) {
-      complete[team.team_number] = itemsWithProgress.length > 0 &&
-        itemsWithProgress.every(i => i.done[team.team_number]);
+      const itemsDone = itemsWithProgress.length === 0 || itemsWithProgress.every(i => i.done[team.team_number]);
+      const groupsDone = groups.length === 0 || groups.every(g => g.done[team.team_number]);
+      complete[team.team_number] = itemsDone && groupsDone;
     }
 
-    return { ...tile, items: itemsWithProgress, complete };
+    return { ...tile, items: itemsWithProgress, groups, complete };
   });
 
   const members = db.all('SELECT * FROM team_members WHERE event_id = ? ORDER BY team, player_name', [eventId]);
@@ -96,6 +122,7 @@ function buildBoard(eventId) {
     let points = 0;
     boardTiles.forEach(tile => {
       tile.items.forEach(item => { if (item.done[team.team_number]) points += item.points; });
+      tile.groups.forEach(g => { points += Math.min(g.totalCounts[team.team_number] || 0, g.target_count); });
     });
     const tilesComplete = boardTiles.filter(t => t.complete[team.team_number]).length;
     return {
@@ -136,7 +163,11 @@ module.exports = function makeGameRouter(broadcast) {
       const tiles = db.all('SELECT * FROM tiles WHERE event_id = ? ORDER BY row, col', [req.params.id]);
       res.json(tiles.map(tile => ({
         ...tile,
-        items: db.all('SELECT * FROM tile_items WHERE tile_id = ?', [tile.id])
+        items: db.all('SELECT * FROM tile_items WHERE tile_id = ? AND group_id IS NULL', [tile.id]),
+        groups: db.all('SELECT * FROM tile_item_groups WHERE tile_id = ? ORDER BY display_order', [tile.id]).map(g => ({
+          ...g,
+          items: db.all('SELECT * FROM tile_items WHERE group_id = ?', [g.id])
+        }))
       })));
     } catch (err) { next(err); }
   });
@@ -211,6 +242,21 @@ module.exports = function makeGameRouter(broadcast) {
       cleanup();
       const plural = requiredQty > 1 ? `all ${requiredQty} drops` : 'this item';
       return res.status(400).json({ error: `Your team has already submitted ${plural} for this item` });
+    }
+
+    // If the item belongs to a pool, check whether that pool is already complete
+    if (tileItem.group_id) {
+      const grp = db.get('SELECT * FROM tile_item_groups WHERE id = ?', [tileItem.group_id]);
+      if (grp) {
+        const poolCount = db.get(
+          "SELECT COUNT(*) as c FROM submissions s JOIN tile_items ti ON ti.id = s.tile_item_id WHERE ti.group_id = ? AND s.team = ? AND s.status = 'approved'",
+          [tileItem.group_id, teamNum]
+        );
+        if ((poolCount?.c || 0) >= grp.target_count) {
+          cleanup();
+          return res.status(400).json({ error: `Your team has already completed the "${grp.group_name}" pool for this tile.` });
+        }
+      }
     }
 
     try {
