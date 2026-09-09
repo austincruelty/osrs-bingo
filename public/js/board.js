@@ -477,8 +477,8 @@ async function submitDrop() {
     const data = await res.json();
     if (data.ok) {
       statusEl.className = 'success';
-      statusEl.textContent = 'Drop submitted and verified!';
-      setTimeout(closeSubmitModal, 1500);
+      statusEl.textContent = 'Drop submitted! Awaiting admin approval.';
+      setTimeout(closeSubmitModal, 2000);
     } else {
       statusEl.className = 'error';
       statusEl.textContent = data.error || 'Submission failed.';

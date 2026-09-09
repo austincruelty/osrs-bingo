@@ -244,7 +244,7 @@ module.exports = function makeGameRouter(broadcast) {
     const screenshotPath = 'uploads/' + path.basename(req.file.path);
     const result = db.run(`
       INSERT INTO submissions (event_id, tile_id, tile_item_id, team, player_name, screenshot_path, status)
-      VALUES (?, ?, ?, ?, ?, ?, 'approved')
+      VALUES (?, ?, ?, ?, ?, ?, 'pending')
     `, [req.params.id, tileItem.tile_id, tile_item_id, teamNum, player_name.trim(), screenshotPath]);
 
     broadcast(req.params.id);
