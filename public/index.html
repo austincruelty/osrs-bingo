@@ -280,15 +280,23 @@
       position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
       background: #0f1e3a; border: 1px solid #4a7fc1;
       border-top: none; border-radius: 0 0 4px 4px;
-      max-height: 220px; overflow-y: auto; display: none;
+      max-height: 240px; overflow-y: auto; display: none;
     }
     .item-suggestion {
       padding: 8px 12px; cursor: pointer; font-size: 0.85rem;
       display: flex; align-items: center; justify-content: space-between; gap: 8px;
     }
     .item-suggestion:hover { background: #1e2a40; }
-    .item-suggestion-name { color: #d4cbb8; }
+    .item-suggestion.offboard { opacity: 0.45; cursor: default; }
+    .item-suggestion.offboard:hover { background: transparent; }
+    .item-suggestion-name { color: #d4cbb8; display: flex; align-items: center; gap: 0; }
     .item-suggestion-tile { font-size: 0.65rem; color: #556; white-space: nowrap; }
+    .item-suggestion-tile.onboard { color: #c89b3c; }
+    #f-tile-display {
+      background: #080c16; border: 1px solid #1e2a40; border-radius: 4px;
+      padding: 9px 12px; font-size: 0.9rem; color: #445; min-height: 38px;
+      transition: color 0.2s, border-color 0.2s;
+    }
 
     .tile {
       background: linear-gradient(160deg, #111827, #0d1525);
@@ -613,6 +621,10 @@
         <div id="item-suggestions"></div>
       </div>
       <input type="hidden" id="f-item">
+    </div>
+    <div class="form-group">
+      <label>Tile</label>
+      <div id="f-tile-display">— select a drop first —</div>
     </div>
     <div class="form-group">
       <label>Screenshot (must show the code word)</label>

@@ -4,6 +4,79 @@ let currentBoard = null;
 let tilesData = [];
 let selectedTeam = null; // null = all teams, or a team_number integer
 
+const OSRS_MASTER_DROPS = [
+  // God Wars Dungeon
+  'Bandos chestplate','Bandos tassets','Bandos boots','Bandos hilt',
+  'Saradomin sword','Armadyl crossbow','Saradomin hilt',
+  'Staff of the dead','Zamorakian spear','Steam battlestaff','Zamorak hilt',
+  'Armadyl helmet','Armadyl chestplate','Armadyl chainskirt','Armadyl hilt',
+  'Torva full helm','Torva platebody','Torva platelegs','Zaryte vambraces','Nihil horn','Ancient hilt',
+  // Wilderness
+  'Tyrannical ring','Voidwaker gem','Treasonous ring','Voidwaker blade','Ring of the gods','Voidwaker hilt',
+  'Dragon pickaxe','Dragon 2h sword','KBD heads','Draconic visage',
+  'Odium shard 1','Malediction shard 1','Ancient staff',
+  'Odium shard 2','Malediction shard 2','Fedora',
+  'Odium shard 3','Malediction shard 3',
+  // Slayer
+  'Abyssal dagger','Bludgeon axon','Bludgeon spine','Bludgeon claw','Jar of miasma',
+  "Hydra's eye","Hydra's fang","Hydra's heart",'Hydra leather','Hydra tail',
+  'Dragon knife','Dragon thrownaxe','Jar of chemicals',
+  'Primordial crystal','Pegasian crystal','Eternal crystal','Smouldering stone','Jar of souls',
+  'Black tourmaline core','Granite gloves','Granite hammer','Granite ring','Jar of stone',
+  'Trident of the seas (full)','Kraken tentacle','Jar of dirt',
+  'Dexterous prayer scroll','Arcane prayer scroll','Dark claw','Jar of darkness',
+  'Smoke battlestaff','Occult necklace','Jar of smoke','Basilisk jaw',
+  // Chambers of Xeric
+  'Twisted bow','Kodai insignia','Elder maul','Dragon hunter crossbow',
+  "Dinh's bulwark",'Dragon claws','Ancestral hat','Ancestral robe top','Ancestral robe bottom','Twisted buckler',
+  // Theatre of Blood
+  'Scythe of vitur (uncharged)','Sanguinesti staff (uncharged)','Ghrazi rapier',
+  'Justiciar faceguard','Justiciar chestguard','Justiciar legguards','Avernic defender hilt','Jar of decay',
+  // Tombs of Amascut
+  "Osmumten's fang","Elidinis' ward","Tumeken's shadow (uncharged)",
+  'Masori mask','Masori body','Masori chaps','Lightbearer','Jar of the scarab',
+  // Desert Treasure II
+  'Chromium ingot',"Awakener's orb",'Virtus mask','Virtus robe top','Virtus robe bottom',
+  'Magus ring vestige','Bellator ring vestige','Ultor ring vestige','Venator ring vestige',"Leviathan's lure",
+  'Jar of dreams',
+  // Dagannoth Kings
+  'Berserker ring','Dragon axe','Mud battlestaff','Seers ring','Archer ring','Warrior ring',
+  // Barrows
+  "Ahrim's hood","Ahrim's robetop","Ahrim's robeskirt","Ahrim's staff",
+  "Dharok's greataxe","Dharok's helm","Dharok's platebody","Dharok's platelegs",
+  "Guthan's warspear","Guthan's helm","Guthan's platebody","Guthan's chainskirt",
+  "Karil's crossbow","Karil's coif","Karil's leathertop","Karil's leatherskirt",
+  "Torag's hammers","Torag's helm","Torag's platebody","Torag's platelegs",
+  "Verac's flail","Verac's helm","Verac's brassard","Verac's plateskirt",
+  // Other bosses
+  'Spectral sigil','Arcane sigil','Elysian sigil','Holy elixir','Spirit shield',
+  'Tanzanite fang','Magic fang','Serpentine visage','Tanzanite mutagen','Magma mutagen','Jar of swamp',
+  'Skeletal visage','Dragonbone necklace','Dragon chainbody','Jar of sand',
+  'Mole skin','Mole claw','Sarachnis cudgel','Giant egg sac','Jar of eyes',
+  "Bryophyta's essence",
+  "Inquisitor's great helm","Inquisitor's hauberk","Inquisitor's plateskirt","Inquisitor's mace",
+  'Nightmare staff','Eldritch orb','Volatile orb','Harmonised orb',
+  'Tackle box','Spirit angler headband','Spirit angler top','Spirit angler waders','Spirit angler boots',
+  'Pyromancer hood','Pyromancer garb','Pyromancer robe','Pyromancer boots','Warm gloves','Tome of fire',
+  'Infernal cape','Jar of ancient effigies','Fire cape',
+  // Fortis Colosseum
+  "Dizana's quiver",'Sunfire fanatic helm','Sunfire fanatic cuirass','Sunfire fanatic chausses',
+  'Echo crystal','Tonalztics of ralos',
+  // Newer bosses
+  'Araxyte fang','Noxious pommel','Noxious point','Noxious blade',
+  'Glacyte boots','Blessed axe','Hueycoatl hide','Snake boots',
+  // Pets
+  'General Graardor','Zilyana',"K'ril Tsutsaroth","Kree'arra",'Nexling',
+  'Callisto cub','Venenatis spiderling',"Vet'ion jr.","Calvar'ion jr.",
+  'Chaos elemental jr.','Prince black dragon',"Scorpia's offspring",
+  'Abyssal orphan','Ikkle Hydra','Hellpuppy','Noon','Pet kraken','Skotos','Pet smoke devil',
+  'Olmlet',"Lil' Zik",'Duke','Levi','Wisp','Butch',
+  'Dagannoth Rex','Dagannoth Prime','Dagannoth Supreme',
+  'Corporeal critter','Pet snakeling','Vorki','Kalphite princess','Baby mole','Sraracha',
+  'Little nightmare','Tiny tempor','Phoenix','Jal-nib-rek','TzRek-Jad','Smol heredit',
+  'Araxyte','Amoxliatl','Hueycoatl',
+];
+
 const TEAM_COLORS = [
   '#4a7fc1', // 1 — blue
   '#c85a1a', // 2 — orange
@@ -289,30 +362,72 @@ function allBoardItems() {
 function itemSearch(query) {
   const suggestionsEl = document.getElementById('item-suggestions');
   suggestionsEl.innerHTML = '';
+
+  // Always reset selection when user types
+  document.getElementById('f-item').value = '';
+  updateTileDisplay(null);
+
   const q = query.trim().toLowerCase();
   if (!q) { suggestionsEl.style.display = 'none'; return; }
 
-  const matches = allBoardItems().filter(i => i.item_name.toLowerCase().includes(q));
-  if (!matches.length) { suggestionsEl.style.display = 'none'; return; }
+  // Index board items by lowercase name for fast lookup
+  const boardByName = {};
+  allBoardItems().forEach(item => { boardByName[item.item_name.toLowerCase()] = item; });
 
-  matches.forEach(item => {
+  // Board items that match query (on the current bingo board)
+  const results = [];
+  const seen = new Set();
+  allBoardItems().forEach(item => {
+    if (item.item_name.toLowerCase().includes(q)) {
+      seen.add(item.item_name.toLowerCase());
+      results.push({ ...item, onBoard: true });
+    }
+  });
+
+  // Master drop list items that match but aren't on the board
+  OSRS_MASTER_DROPS.forEach(name => {
+    if (name.toLowerCase().includes(q) && !seen.has(name.toLowerCase())) {
+      results.push({ item_name: name, onBoard: false, id: null, tile_name: null, wiki_image: null });
+    }
+  });
+
+  if (!results.length) { suggestionsEl.style.display = 'none'; return; }
+
+  results.forEach(item => {
     const div = document.createElement('div');
-    div.className = 'item-suggestion';
+    div.className = 'item-suggestion' + (item.onBoard ? '' : ' offboard');
     div.innerHTML = `
       <span class="item-suggestion-name">
         <img src="${itemSpriteUrl(item.item_name, item.wiki_image)}" style="width:18px;height:18px;object-fit:contain;image-rendering:pixelated;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'" alt="">
         ${escHtml(item.item_name)}
       </span>
-      <span class="item-suggestion-tile">${escHtml(item.tile_name)}</span>`;
-    div.addEventListener('mousedown', e => {
-      e.preventDefault();
-      document.getElementById('f-item-search').value = item.item_name;
-      document.getElementById('f-item').value = item.id;
-      suggestionsEl.style.display = 'none';
-    });
+      <span class="item-suggestion-tile${item.onBoard ? ' onboard' : ''}">${item.onBoard ? escHtml(item.tile_name) : 'Not on board'}</span>`;
+    if (item.onBoard) {
+      div.addEventListener('mousedown', e => {
+        e.preventDefault();
+        document.getElementById('f-item-search').value = item.item_name;
+        document.getElementById('f-item').value = item.id;
+        updateTileDisplay(item.tile_name);
+        suggestionsEl.style.display = 'none';
+      });
+    }
     suggestionsEl.appendChild(div);
   });
   suggestionsEl.style.display = 'block';
+}
+
+function updateTileDisplay(tileName) {
+  const el = document.getElementById('f-tile-display');
+  if (!el) return;
+  if (tileName) {
+    el.textContent = tileName;
+    el.style.color = '#c89b3c';
+    el.style.borderColor = '#c89b3c44';
+  } else {
+    el.textContent = '— select a drop first —';
+    el.style.color = '#445';
+    el.style.borderColor = '#1e2a40';
+  }
 }
 
 function itemBlur() {
@@ -328,6 +443,7 @@ function openSubmitModal() {
   document.getElementById('f-item-search').value = '';
   document.getElementById('f-item').value = '';
   document.getElementById('item-suggestions').style.display = 'none';
+  updateTileDisplay(null);
   document.getElementById('upload-modal').classList.add('open');
 }
 
