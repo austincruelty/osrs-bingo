@@ -673,7 +673,7 @@ function openTileModal(row, col, tile, droppedBoss = null) {
   const itemsList = document.getElementById('modal-items');
   itemsList.innerHTML = '';
   const items = tile?.items?.length ? tile.items : [];
-  items.forEach(item => addItemRow(item.item_name, item.quantity || 1, item.wiki_image || ''));
+  items.forEach(item => addItemRow(item.item_name, item.quantity || 1, item.wiki_image || '', item.id));
   if (droppedBoss) addItemRow(droppedBoss);
   else if (!items.length) addItemRow('');
   document.getElementById('tile-modal').classList.add('open');
@@ -690,9 +690,10 @@ function itemSpriteUrl(name, wikiImage) {
   return `https://oldschool.runescape.wiki/images/${encodeURIComponent(wikiName)}.png`;
 }
 
-function addItemRow(value = '', qty = 1, wikiImage = '') {
+function addItemRow(value = '', qty = 1, wikiImage = '', itemId = null) {
   const row = document.createElement('div');
   row.className = 'item-row';
+  if (itemId) row.dataset.itemId = itemId;
   row.style.cssText = 'display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;';
   const spriteUrl = value ? itemSpriteUrl(value, wikiImage) : '';
   row.innerHTML = `
@@ -728,6 +729,7 @@ async function saveTile() {
   const tileName = document.getElementById('modal-tile-name').value.trim();
   const items = Array.from(document.querySelectorAll('#modal-items .item-row'))
     .map(row => ({
+      id: row.dataset.itemId ? parseInt(row.dataset.itemId) : null,
       name: row.querySelector('.item-name-input').value.trim(),
       qty: parseInt(row.querySelector('.item-qty-input').value) || 1,
       wiki_image: (row.querySelector('.item-wiki-input')?.value || '').trim()

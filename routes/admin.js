@@ -94,20 +94,57 @@ module.exports = function makeAdminRouter(broadcast) {
 
     const saveTile = db.transaction((eventId, row, col, tile_name, items) => {
       const existing = db.get('SELECT id FROM tiles WHERE event_id = ? AND row = ? AND col = ?', [eventId, row, col]);
+
+      let tileId;
       if (existing) {
-        db.run('DELETE FROM tile_items WHERE tile_id = ?', [existing.id]);
-        db.run('DELETE FROM tiles WHERE id = ?', [existing.id]);
+        // Update in-place so submissions keep referencing the same tile/item IDs
+        tileId = existing.id;
+        db.run('UPDATE tiles SET tile_name = ? WHERE id = ?', [tile_name, tileId]);
+
+        const existingItems = db.all('SELECT id FROM tile_items WHERE tile_id = ?', [tileId]);
+        const existingIds = new Set(existingItems.map(i => i.id));
+        const keptIds = new Set(items.filter(i => i.id).map(i => Number(i.id)));
+
+        // Remove items that were deleted from the form, but only if no submissions reference them
+        for (const ex of existingItems) {
+          if (!keptIds.has(ex.id)) {
+            const hasSubs = db.get('SELECT COUNT(*) as c FROM submissions WHERE tile_item_id = ?', [ex.id]);
+            if (!(hasSubs && hasSubs.c > 0)) {
+              db.run('DELETE FROM tile_items WHERE id = ?', [ex.id]);
+            }
+          }
+        }
+
+        // Update existing items or insert new ones
+        for (const item of items) {
+          const name = (typeof item === 'string' ? item : item.name || '').trim();
+          const qty = Math.max(1, parseInt((typeof item === 'object' && item.qty) || 1) || 1);
+          const wikiImage = (typeof item === 'object' ? (item.wiki_image || '') : '').trim() || null;
+          if (!name) continue;
+          if (item.id && existingIds.has(Number(item.id))) {
+            db.run('UPDATE tile_items SET item_name = ?, quantity = ?, wiki_image = ? WHERE id = ?',
+              [name, qty, wikiImage, Number(item.id)]);
+          } else {
+            db.run('INSERT INTO tile_items (tile_id, item_name, quantity, wiki_image) VALUES (?, ?, ?, ?)',
+              [tileId, name, qty, wikiImage]);
+          }
+        }
+      } else {
+        // New tile
+        const { lastInsertRowid } = db.run(
+          'INSERT INTO tiles (event_id, row, col, tile_name) VALUES (?, ?, ?, ?)',
+          [eventId, row, col, tile_name]
+        );
+        tileId = lastInsertRowid;
+        for (const item of items) {
+          const name = (typeof item === 'string' ? item : item.name || '').trim();
+          const qty = Math.max(1, parseInt((typeof item === 'object' && item.qty) || 1) || 1);
+          const wikiImage = (typeof item === 'object' ? (item.wiki_image || '') : '').trim() || null;
+          if (name) db.run('INSERT INTO tile_items (tile_id, item_name, quantity, wiki_image) VALUES (?, ?, ?, ?)',
+            [tileId, name, qty, wikiImage]);
+        }
       }
-      const { lastInsertRowid: tileId } = db.run(
-        'INSERT INTO tiles (event_id, row, col, tile_name) VALUES (?, ?, ?, ?)',
-        [eventId, row, col, tile_name]
-      );
-      for (const item of items) {
-        const name = (typeof item === 'string' ? item : item.name || '').trim();
-        const qty = Math.max(1, parseInt((typeof item === 'object' && item.qty) || 1) || 1);
-        const wikiImage = (typeof item === 'object' ? (item.wiki_image || '') : '').trim() || null;
-        if (name) db.run('INSERT INTO tile_items (tile_id, item_name, quantity, wiki_image) VALUES (?, ?, ?, ?)', [tileId, name, qty, wikiImage]);
-      }
+
       return tileId;
     });
 
@@ -117,6 +154,12 @@ module.exports = function makeAdminRouter(broadcast) {
   });
 
   router.delete('/events/:id/tiles/:tileId', (req, res) => {
+    const hasSubs = db.get(
+      'SELECT COUNT(*) as c FROM submissions WHERE tile_id = ?', [req.params.tileId]
+    );
+    if (hasSubs && hasSubs.c > 0) {
+      return res.status(400).json({ error: 'Cannot delete a tile that has submissions. Remove the submissions first.' });
+    }
     db.run('DELETE FROM tile_items WHERE tile_id = ?', [req.params.tileId]);
     db.run('DELETE FROM tiles WHERE id = ?', [req.params.tileId]);
     broadcast(req.params.id);
