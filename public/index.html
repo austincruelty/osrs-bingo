@@ -276,6 +276,20 @@
     .rsn-suggestion-name { color: #d4cbb8; }
     .rsn-suggestion-team { font-size: 0.65rem; padding: 2px 7px; border-radius: 8px; white-space: nowrap; }
 
+    #item-suggestions {
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
+      background: #0f1e3a; border: 1px solid #4a7fc1;
+      border-top: none; border-radius: 0 0 4px 4px;
+      max-height: 220px; overflow-y: auto; display: none;
+    }
+    .item-suggestion {
+      padding: 8px 12px; cursor: pointer; font-size: 0.85rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    .item-suggestion:hover { background: #1e2a40; }
+    .item-suggestion-name { color: #d4cbb8; }
+    .item-suggestion-tile { font-size: 0.65rem; color: #556; white-space: nowrap; }
+
     .tile {
       background: linear-gradient(160deg, #111827, #0d1525);
       border: 1px solid #1e2a40;
@@ -592,16 +606,13 @@
       </select>
     </div>
     <div class="form-group">
-      <label>Tile</label>
-      <select id="f-tile" onchange="populateItems()">
-        <option value="">Select tile...</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Item</label>
-      <select id="f-item">
-        <option value="">Select item...</option>
-      </select>
+      <label>Drop Received</label>
+      <div class="rsn-wrap">
+        <input type="text" id="f-item-search" placeholder="Start typing your drop..." autocomplete="off"
+               oninput="itemSearch(this.value)" onblur="itemBlur()">
+        <div id="item-suggestions"></div>
+      </div>
+      <input type="hidden" id="f-item">
     </div>
     <div class="form-group">
       <label>Screenshot (must show the code word)</label>

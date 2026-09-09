@@ -269,34 +269,61 @@ async function loadTilesForModal() {
   if (!currentEventId) return;
   const res = await fetch(`/api/events/${currentEventId}/tiles`);
   tilesData = await res.json();
-  const tileSelect = document.getElementById('f-tile');
-  tileSelect.innerHTML = '<option value="">Select tile...</option>';
-  tilesData.forEach(t => {
-    const opt = document.createElement('option');
-    opt.value = t.id;
-    opt.textContent = t.tile_name;
-    tileSelect.appendChild(opt);
-  });
 }
 
-function populateItems() {
-  const tileId = document.getElementById('f-tile').value;
-  const itemSelect = document.getElementById('f-item');
-  itemSelect.innerHTML = '<option value="">Select item...</option>';
-  if (!tileId) return;
-  const tile = tilesData.find(t => String(t.id) === String(tileId));
-  if (!tile) return;
-  tile.items.forEach((item, idx) => {
-    const opt = document.createElement('option');
-    opt.value = item.id;
-    opt.textContent = `${'★'.repeat(Math.min(idx + 1, 3))} ${item.item_name}`;
-    itemSelect.appendChild(opt);
+// Flat list of all items across all tiles for autocomplete
+function allBoardItems() {
+  const items = [];
+  tilesData.forEach(tile => {
+    (tile.items || []).forEach(item => {
+      items.push({ id: item.id, item_name: item.item_name, tile_name: tile.tile_name });
+    });
   });
+  return items;
+}
+
+function itemSearch(query) {
+  const suggestionsEl = document.getElementById('item-suggestions');
+  suggestionsEl.innerHTML = '';
+  const q = query.trim().toLowerCase();
+  if (!q) { suggestionsEl.style.display = 'none'; return; }
+
+  const matches = allBoardItems().filter(i => i.item_name.toLowerCase().includes(q));
+  if (!matches.length) { suggestionsEl.style.display = 'none'; return; }
+
+  matches.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'item-suggestion';
+    div.innerHTML = `
+      <span class="item-suggestion-name">
+        <img src="${itemSpriteUrl(item.item_name)}" style="width:18px;height:18px;object-fit:contain;image-rendering:pixelated;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'" alt="">
+        ${escHtml(item.item_name)}
+      </span>
+      <span class="item-suggestion-tile">${escHtml(item.tile_name)}</span>`;
+    div.addEventListener('mousedown', e => {
+      e.preventDefault();
+      document.getElementById('f-item-search').value = item.item_name;
+      document.getElementById('f-item').value = item.id;
+      suggestionsEl.style.display = 'none';
+    });
+    suggestionsEl.appendChild(div);
+  });
+  suggestionsEl.style.display = 'block';
+}
+
+function itemBlur() {
+  setTimeout(() => {
+    const el = document.getElementById('item-suggestions');
+    if (el) el.style.display = 'none';
+  }, 150);
 }
 
 function openSubmitModal() {
   if (!currentEventId) { alert('Please select an event first.'); return; }
   document.getElementById('upload-status').textContent = '';
+  document.getElementById('f-item-search').value = '';
+  document.getElementById('f-item').value = '';
+  document.getElementById('item-suggestions').style.display = 'none';
   document.getElementById('upload-modal').classList.add('open');
 }
 
@@ -313,7 +340,7 @@ async function submitDrop() {
 
   if (!player) { statusEl.className = 'error'; statusEl.textContent = 'Enter your RSN.'; return; }
   if (!team) { statusEl.className = 'error'; statusEl.textContent = 'Select your team.'; return; }
-  if (!tileItemId) { statusEl.className = 'error'; statusEl.textContent = 'Select a tile and item.'; return; }
+  if (!tileItemId) { statusEl.className = 'error'; statusEl.textContent = 'Select a drop from the list.'; return; }
   if (!file) { statusEl.className = 'error'; statusEl.textContent = 'Upload a screenshot.'; return; }
 
   statusEl.className = '';
