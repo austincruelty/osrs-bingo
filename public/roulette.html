@@ -255,7 +255,8 @@ canvas { border-radius: 50%; display: block; }
     <h3>Submit Drop</h3>
     <div class="form-group">
       <label>Your RSN</label>
-      <select id="sub-rsn"></select>
+      <input type="text" id="sub-rsn" list="rsn-suggestions" placeholder="Your in-game name" autocomplete="off">
+      <datalist id="rsn-suggestions"></datalist>
     </div>
     <div class="form-group">
       <label>Active Boss</label>
@@ -577,12 +578,11 @@ function openSubmitModal(teamNum, spinId) {
   document.getElementById('sub-status').textContent = '';
   document.getElementById('sub-screenshot').value = '';
 
-  // Populate RSN dropdown from team roster
+  // Populate RSN suggestions from team roster
   const teamMembers = (currentState?.members || []).filter(m => m.team === teamNum);
-  const rsnSel = document.getElementById('sub-rsn');
-  rsnSel.innerHTML = teamMembers.length
-    ? teamMembers.map(m => `<option value="${escHtml(m.player_name)}">${escHtml(m.player_name)}</option>`).join('')
-    : '<option value="">No players on roster</option>';
+  document.getElementById('rsn-suggestions').innerHTML =
+    teamMembers.map(m => `<option value="${escHtml(m.player_name)}">`).join('');
+  document.getElementById('sub-rsn').value = '';
 
   // Populate spin selector with all active spins for this team
   const team = currentState?.teams?.find(t => t.team_number === teamNum);
