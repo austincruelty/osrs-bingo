@@ -267,8 +267,13 @@
 
   <!-- Team Roster -->
   <section id="roster-section" style="display:none">
-    <h2>Team Roster</h2>
-    <div class="roster-grid" id="roster-grid"></div>
+    <div class="section-hdr" onclick="toggleSection('roster-body')">
+      <h2 style="margin:0;">Team Roster</h2>
+      <span class="section-caret" id="caret-roster-body">▼</span>
+    </div>
+    <div id="roster-body">
+      <div class="roster-grid" id="roster-grid"></div>
+    </div>
   </section>
 
   <!-- Board Editor -->
@@ -651,6 +656,8 @@ async function selectEvent(ev) {
   selectedTeamsList = teams;
   renderTeamEditor(teams);
   renderRosterPanels(teams);
+
+  restoreSectionState('roster-body');
 
   if (isRoulette) {
     restoreSectionState('roulette-submissions-body');
