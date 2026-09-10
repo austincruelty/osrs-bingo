@@ -254,6 +254,9 @@ async function init() {
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`);
 
+  // Migrations: boss tier corrections
+  try { db.run("UPDATE roulette_bosses SET wheel_tier = 1 WHERE boss_name = 'Gauntlet'"); } catch {}
+
   // Seed boss/drop data (runs once)
   const bossCount = db.get('SELECT COUNT(*) as c FROM roulette_bosses');
   if (!bossCount || bossCount.c === 0) {
@@ -349,7 +352,7 @@ async function init() {
         ['Draconic Visage',150],['Skeletal Visage',150],['Dragonbone Necklace',100],
         ["Vorkath's Head",50],['Jar of Decay',150],['Pet',500],
       ]},
-      { tier:2, name:'Gauntlet', drops:[
+      { tier:1, name:'Gauntlet', drops:[
         ['Crystal Weapon Seed',75],['Crystal Armour Seed',100],
         ['Enhanced Crystal Weapon Seed',200],['Pet',500],
       ]},
