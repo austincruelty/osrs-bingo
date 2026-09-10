@@ -146,8 +146,8 @@
 <header>
   <h1>⚙️ Veritas Bingo — Admin</h1>
   <div style="display:flex;gap:16px;align-items:center;">
-    <a href="/">← Bingo Board</a>
-    <a href="/roulette.html">🎰 Roulette</a>
+    <a href="/" style="color:#4a7fc1;font-size:0.85rem;text-decoration:none;">🏠 Home</a>
+    <a id="back-to-board" href="/" style="color:#c89b3c;font-size:0.85rem;text-decoration:none;display:none;">← Back to Board</a>
   </div>
 </header>
 
@@ -560,6 +560,10 @@ async function selectEvent(ev) {
 
   document.getElementById('edit-event-name').textContent = ev.name;
   document.getElementById('edit-name').value = ev.name;
+  const boardLink = document.getElementById('back-to-board');
+  boardLink.href = isRoulette ? `/roulette.html?event=${ev.id}` : `/?event=${ev.id}`;
+  boardLink.textContent = `← Back to ${ev.name}`;
+  boardLink.style.display = 'inline';
   document.getElementById('edit-codeword').value = ev.code_word;
   document.getElementById('edit-rules').value = ev.rules || '';
   document.getElementById('board-event-name').textContent = ev.name;

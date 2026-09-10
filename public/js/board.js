@@ -622,4 +622,8 @@ async function loadFeed() {
 
 setInterval(() => { if (currentEventId) loadFeed(); }, 60000);
 
-loadEvents();
+loadEvents().then(() => {
+  const params = new URLSearchParams(location.search);
+  const eventId = params.get('event');
+  if (eventId) landingSelectEvent(eventId);
+});
