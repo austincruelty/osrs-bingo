@@ -138,6 +138,8 @@
     .drop-name-inp { flex:1; min-width:0; font-size:0.82rem; padding:5px 8px; }
     .drop-pts-inp { width:64px; flex-shrink:0; font-size:0.82rem; padding:5px 8px; text-align:center; }
     .drop-action-btn { font-size:0.72rem; padding:4px 8px; flex-shrink:0; }
+    .drop-url-row { display:flex; gap:5px; align-items:center; margin-bottom:8px; padding-left:31px; }
+    .drop-url-inp { flex:1; font-size:0.75rem; padding:3px 7px; color:#9ab8d8; }
     .add-drop-row { display:flex; gap:5px; margin-top:8px; padding-top:8px; border-top:1px solid #1e2a4055; }
     .add-drop-row input { font-size:0.82rem; }
     .no-drops-msg { color:#445; font-size:0.8rem; margin-bottom:8px; }
@@ -1457,14 +1459,21 @@ function renderBossManager(bosses) {
 function bossCard(b) {
   const isOpen = _openBossId === b.id;
   const dropsHtml = b.drops.map(d => `
-    <div class="drop-row" id="drop-row-${d.id}">
-      <img class="drop-sprite-sm" src="${wikiSpriteUrl(d.item_name)}" alt=""
-           onerror="this.setAttribute('data-broken','1')" title="${escHtml(d.item_name)}">
-      <input class="drop-name-inp" type="text" value="${escHtml(d.item_name)}" id="drop-name-${d.id}"
-             oninput="this.closest('.drop-row').querySelector('img').src=wikiSpriteUrl(this.value);this.closest('.drop-row').querySelector('img').removeAttribute('data-broken')">
-      <input class="drop-pts-inp" type="number" value="${d.base_points}" id="drop-pts-${d.id}" min="0">
-      <button class="btn btn-blue drop-action-btn" onclick="saveDrop(${d.id})">Save</button>
-      <button class="btn btn-red drop-action-btn" onclick="deleteDrop(${d.id}, ${b.id})">✕</button>
+    <div id="drop-row-${d.id}">
+      <div class="drop-row">
+        <img class="drop-sprite-sm" id="drop-sprite-${d.id}"
+             src="${d.image_url || wikiSpriteUrl(d.item_name)}" alt=""
+             onerror="this.setAttribute('data-broken','1')" title="${escHtml(d.item_name)}">
+        <input class="drop-name-inp" type="text" value="${escHtml(d.item_name)}" id="drop-name-${d.id}">
+        <input class="drop-pts-inp" type="number" value="${d.base_points}" id="drop-pts-${d.id}" min="0">
+        <button class="btn btn-blue drop-action-btn" onclick="saveDrop(${d.id})">Save</button>
+        <button class="btn btn-red drop-action-btn" onclick="deleteDrop(${d.id}, ${b.id})">✕</button>
+      </div>
+      <div class="drop-url-row">
+        <input class="drop-url-inp" type="text" id="drop-url-${d.id}"
+               value="${escHtml(d.image_url || '')}" placeholder="Image URL (paste from wiki, optional)"
+               oninput="const img=document.getElementById('drop-sprite-${d.id}');img.src=this.value||wikiSpriteUrl(document.getElementById('drop-name-${d.id}').value);img.removeAttribute('data-broken')">
+      </div>
     </div>`).join('');
 
   return `<div class="boss-card" id="boss-card-${b.id}">
@@ -1545,11 +1554,12 @@ async function addBoss() {
 async function saveDrop(id) {
   const name = document.getElementById(`drop-name-${id}`).value.trim();
   const pts = parseInt(document.getElementById(`drop-pts-${id}`).value) || 0;
+  const imageUrl = document.getElementById(`drop-url-${id}`)?.value.trim() || null;
   if (!name) return;
   const res = await adminFetch(`/api/admin/roulette/boss-drops/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ item_name: name, base_points: pts })
+    body: JSON.stringify({ item_name: name, base_points: pts, image_url: imageUrl })
   });
   const data = await res.json();
   if (!data.ok) alert(data.error || 'Save failed.');

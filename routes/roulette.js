@@ -87,7 +87,7 @@ module.exports = function makeRouletteRouter(broadcast) {
                et.team_name,
                rsub.status as sub_status, rsub.points_awarded, rsub.bonus_points,
                rsub.player_name,
-               rdrop.item_name as submitted_item
+               rdrop.item_name as submitted_item, rdrop.image_url as submitted_image_url
         FROM roulette_spins rs
         JOIN roulette_bosses rb ON rb.id = rs.boss_id
         LEFT JOIN roulette_boss_drops rbd ON rbd.id = rs.bonus_drop_id

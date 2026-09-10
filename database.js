@@ -256,6 +256,7 @@ async function init() {
 
   // Migrations: boss tier corrections
   try { db.run("UPDATE roulette_bosses SET wheel_tier = 1 WHERE boss_name = 'Gauntlet'"); } catch {}
+  try { db.run("ALTER TABLE roulette_boss_drops ADD COLUMN image_url TEXT"); } catch {}
 
   // Seed boss/drop data (runs once)
   const bossCount = db.get('SELECT COUNT(*) as c FROM roulette_bosses');

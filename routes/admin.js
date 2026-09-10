@@ -486,21 +486,21 @@ module.exports = function makeAdminRouter(broadcast) {
   });
 
   router.post('/roulette/boss-drops', (req, res) => {
-    const { boss_id, item_name, base_points } = req.body;
+    const { boss_id, item_name, base_points, image_url } = req.body;
     if (!boss_id || !item_name) return res.status(400).json({ error: 'boss_id and item_name required' });
     try {
-      const r = db.run('INSERT INTO roulette_boss_drops (boss_id, item_name, base_points) VALUES (?, ?, ?)',
-        [parseInt(boss_id), item_name.trim(), parseInt(base_points) || 0]);
+      const r = db.run('INSERT INTO roulette_boss_drops (boss_id, item_name, base_points, image_url) VALUES (?, ?, ?, ?)',
+        [parseInt(boss_id), item_name.trim(), parseInt(base_points) || 0, image_url?.trim() || null]);
       res.json({ ok: true, id: r.lastInsertRowid });
     } catch { res.status(400).json({ error: 'Drop already exists for this boss' }); }
   });
 
   router.patch('/roulette/boss-drops/:id', (req, res) => {
-    const { item_name, base_points } = req.body;
+    const { item_name, base_points, image_url } = req.body;
     const drop = db.get('SELECT * FROM roulette_boss_drops WHERE id = ?', [req.params.id]);
     if (!drop) return res.status(404).json({ error: 'Drop not found' });
-    db.run('UPDATE roulette_boss_drops SET item_name = ?, base_points = ? WHERE id = ?',
-      [item_name ?? drop.item_name, parseInt(base_points ?? drop.base_points), req.params.id]);
+    db.run('UPDATE roulette_boss_drops SET item_name = ?, base_points = ?, image_url = ? WHERE id = ?',
+      [item_name ?? drop.item_name, parseInt(base_points ?? drop.base_points), image_url !== undefined ? (image_url?.trim() || null) : drop.image_url, req.params.id]);
     res.json({ ok: true });
   });
 

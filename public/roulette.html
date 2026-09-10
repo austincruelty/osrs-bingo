@@ -429,7 +429,7 @@ function showDropCelebration(drop) {
 
   document.getElementById('celeb-team').textContent = drop.team_name;
   document.getElementById('celeb-team').style.color = color;
-  document.getElementById('celeb-sprite').src = wikiSpriteUrl(drop.submitted_item);
+  document.getElementById('celeb-sprite').src = drop.submitted_image_url || wikiSpriteUrl(drop.submitted_item);
   document.getElementById('celeb-sprite').style.display = '';
   document.getElementById('celeb-boss').textContent = drop.boss_name ? `from ${drop.boss_name}` : '';
   document.getElementById('celeb-item').textContent = drop.submitted_item || '';
@@ -637,7 +637,7 @@ function renderState() {
   } else {
     feedEl.innerHTML = approvedDrops.slice(0, 30).map(h => {
       const color = teamColors(h.team);
-      const spriteUrl = wikiSpriteUrl(h.submitted_item);
+      const spriteUrl = h.submitted_image_url || wikiSpriteUrl(h.submitted_item);
       const pts = (h.points_awarded || 0) + (h.bonus_points || 0);
       const who = h.player_name ? ` · ${escHtml(h.player_name)}` : '';
       return `<div class="drop-entry">
