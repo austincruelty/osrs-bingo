@@ -113,8 +113,15 @@ async function loadEvents() {
 
     const btn = document.createElement('button');
     btn.className = 'landing-event-btn';
-    btn.innerHTML = `<span class="landing-event-name">${escHtml(ev.name)}</span><span class="landing-event-status ${ev.status}">${ev.status}</span>`;
-    btn.addEventListener('click', () => landingSelectEvent(String(ev.id)));
+    const typeTag = ev.game_type === 'roulette' ? ' 🎰' : '';
+    btn.innerHTML = `<span class="landing-event-name">${escHtml(ev.name)}${typeTag}</span><span class="landing-event-status ${ev.status}">${ev.status}</span>`;
+    btn.addEventListener('click', () => {
+      if (ev.game_type === 'roulette') {
+        window.location.href = `/roulette.html?event=${ev.id}`;
+      } else {
+        landingSelectEvent(String(ev.id));
+      }
+    });
     landingContainer.appendChild(btn);
   });
 }
