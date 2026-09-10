@@ -356,8 +356,8 @@
     <div id="roulette-submissions-content">Loading...</div>
   </section>
 
-  <!-- Boss Manager (always visible) -->
-  <section id="boss-manager-section">
+  <!-- Boss Manager (roulette events only) -->
+  <section id="boss-manager-section" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <h2 style="margin:0;">⚙️ Boss Manager</h2>
       <button class="btn btn-gold" onclick="toggleAddBossForm()">+ Add Boss</button>
@@ -610,6 +610,7 @@ async function selectEvent(ev) {
   document.getElementById('roulette-config-section').style.display = isRoulette ? 'block' : 'none';
   document.getElementById('roulette-banks-section').style.display = isRoulette ? 'block' : 'none';
   document.getElementById('roulette-submissions-section').style.display = isRoulette ? 'block' : 'none';
+  document.getElementById('boss-manager-section').style.display = isRoulette ? 'block' : 'none';
 
   document.getElementById('edit-event-name').textContent = ev.name;
   document.getElementById('edit-name').value = ev.name;
@@ -1215,7 +1216,7 @@ async function deleteEvent(id, name) {
       selectedEventId = null;
       selectedEventData = null;
       ['edit-section','roster-section','board-section','submissions-section',
-       'roulette-link-section','roulette-config-section','roulette-banks-section','roulette-submissions-section']
+       'roulette-link-section','roulette-config-section','roulette-banks-section','roulette-submissions-section','boss-manager-section']
         .forEach(s => { document.getElementById(s).style.display = 'none'; });
     }
     loadEvents();
