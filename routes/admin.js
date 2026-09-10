@@ -70,11 +70,11 @@ module.exports = function makeAdminRouter(broadcast) {
   });
 
   router.post('/events', (req, res) => {
-    const { name, code_word, team1_name, team2_name, gamemode_id } = req.body;
+    const { name, code_word, team1_name, team2_name, gamemode_id, game_type } = req.body;
     if (!name || !code_word) return res.status(400).json({ error: 'name and code_word required' });
     const result = db.run(
-      'INSERT INTO events (name, code_word, team1_name, team2_name) VALUES (?, ?, ?, ?)',
-      [name, code_word, team1_name || 'Team 1', team2_name || 'Team 2']
+      'INSERT INTO events (name, code_word, team1_name, team2_name, game_type) VALUES (?, ?, ?, ?, ?)',
+      [name, code_word, team1_name || 'Team 1', team2_name || 'Team 2', game_type || 'bingo']
     );
     const eventId = result.lastInsertRowid;
     db.run('INSERT INTO event_teams (event_id, team_number, team_name) VALUES (?, 1, ?)', [eventId, team1_name || 'Team 1']);
@@ -344,6 +344,75 @@ module.exports = function makeAdminRouter(broadcast) {
     db.run('UPDATE submissions SET status = ?, rejection_reason = ? WHERE id = ?',
       [status, rejection_reason || null, req.params.submissionId]);
     broadcast(sub.event_id);
+    res.json({ ok: true });
+  });
+
+  // ── Roulette Admin ────────────────────────────────────────
+  router.get('/roulette/events/:id/submissions', (req, res) => {
+    const subs = db.all(`
+      SELECT rs.*, rspin.wheel_tier, rspin.status as spin_status,
+             rb.boss_name, rdrop.item_name as drop_name, rdrop.base_points,
+             rspin.bonus_drop_id, bonus_drop.item_name as bonus_item,
+             et.team_name
+      FROM roulette_submissions rs
+      JOIN roulette_spins rspin ON rspin.id = rs.spin_id
+      JOIN roulette_bosses rb ON rb.id = rspin.boss_id
+      LEFT JOIN roulette_boss_drops rdrop ON rdrop.id = rs.drop_id
+      LEFT JOIN roulette_boss_drops bonus_drop ON bonus_drop.id = rspin.bonus_drop_id
+      LEFT JOIN event_teams et ON et.event_id = rs.event_id AND et.team_number = rs.team
+      WHERE rs.event_id = ?
+      ORDER BY rs.created_at DESC
+    `, [req.params.id]);
+    res.json(subs);
+  });
+
+  router.patch('/roulette/submissions/:id', (req, res) => {
+    const { status } = req.body;
+    if (!['approved', 'rejected'].includes(status)) return res.status(400).json({ error: 'invalid status' });
+    const sub = db.get('SELECT * FROM roulette_submissions WHERE id = ?', [req.params.id]);
+    if (!sub) return res.status(404).json({ error: 'Not found' });
+
+    if (status === 'approved') {
+      const spin = db.get('SELECT * FROM roulette_spins WHERE id = ?', [sub.spin_id]);
+      const drop = db.get('SELECT * FROM roulette_boss_drops WHERE id = ?', [sub.drop_id]);
+      const config = db.get('SELECT * FROM roulette_event_config WHERE event_id = ?', [sub.event_id])
+        || { bonus_value: 100 };
+      const basePoints = drop?.base_points || 0;
+      const bonusPoints = spin && drop && spin.bonus_drop_id === sub.drop_id ? config.bonus_value : 0;
+      const total = basePoints + bonusPoints;
+
+      db.run('UPDATE roulette_submissions SET status = ?, points_awarded = ?, bonus_points = ? WHERE id = ?',
+        [status, basePoints, bonusPoints, sub.id]);
+      db.run('UPDATE roulette_spins SET status = ? WHERE id = ?', ['completed', sub.spin_id]);
+      db.run('INSERT INTO roulette_bank_log (event_id, team, amount, reason) VALUES (?, ?, ?, ?)',
+        [sub.event_id, sub.team, total, `${drop?.item_name || 'Drop'} from boss${bonusPoints ? ` +${bonusPoints} bonus` : ''}`]);
+    } else {
+      db.run('UPDATE roulette_submissions SET status = ? WHERE id = ?', [status, sub.id]);
+    }
+
+    broadcast(sub.event_id);
+    res.json({ ok: true });
+  });
+
+  router.post('/roulette/events/:id/bank-adjust', (req, res) => {
+    const { team, amount, reason } = req.body;
+    if (!team || !amount || !reason) return res.status(400).json({ error: 'team, amount, reason required' });
+    db.run('INSERT INTO roulette_bank_log (event_id, team, amount, reason) VALUES (?, ?, ?, ?)',
+      [req.params.id, parseInt(team), parseInt(amount), reason]);
+    broadcast(req.params.id);
+    res.json({ ok: true });
+  });
+
+  router.patch('/roulette/events/:id/config', (req, res) => {
+    const { starting_bank, respin_cost, bonus_value } = req.body;
+    const existing = db.get('SELECT id FROM roulette_event_config WHERE event_id = ?', [req.params.id]);
+    if (existing) {
+      db.run('UPDATE roulette_event_config SET starting_bank = ?, respin_cost = ?, bonus_value = ? WHERE event_id = ?',
+        [starting_bank ?? 500, respin_cost ?? 200, bonus_value ?? 100, req.params.id]);
+    } else {
+      db.run('INSERT INTO roulette_event_config (event_id, starting_bank, respin_cost, bonus_value) VALUES (?, ?, ?, ?)',
+        [req.params.id, starting_bank ?? 500, respin_cost ?? 200, bonus_value ?? 100]);
+    }
     res.json({ ok: true });
   });
 

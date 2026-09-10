@@ -11,6 +11,7 @@ async function main() {
 
   const adminRoutes = require('./routes/admin');
   const makeGameRouter = require('./routes/game');
+  const makeRouletteRouter = require('./routes/roulette');
 
   const app = express();
   const server = http.createServer(app);
@@ -25,6 +26,7 @@ async function main() {
 
   app.use('/api/admin', adminRoutes(broadcast));
   app.use('/api', makeGameRouter(broadcast));
+  app.use('/api/roulette', makeRouletteRouter(broadcast));
 
   // Return JSON errors instead of HTML so the browser can read them
   app.use((err, req, res, next) => {

@@ -145,7 +145,10 @@
 <body>
 <header>
   <h1>⚙️ Veritas Bingo — Admin</h1>
-  <a href="/">← Back to Board</a>
+  <div style="display:flex;gap:16px;align-items:center;">
+    <a href="/">← Bingo Board</a>
+    <a href="/roulette.html">🎰 Roulette</a>
+  </div>
 </header>
 
 <div class="container">
@@ -169,9 +172,16 @@
       </div>
       <button class="btn btn-gold" onclick="submitNewEvent()">Create Event</button>
     </div>
-    <div class="form-row" style="margin-top:4px;">
-      <div style="flex:1;min-width:200px;">
-        <label style="font-size:0.72rem;color:#556;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Gamemode Template</label>
+    <div class="form-row" style="margin-top:4px;gap:16px;">
+      <div style="flex:1;min-width:160px;">
+        <label style="font-size:0.72rem;color:#556;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Game Type</label>
+        <select id="ev-gametype" style="width:100%;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:8px 10px;font-size:0.85rem;">
+          <option value="bingo">🟩 Bingo</option>
+          <option value="roulette">🎰 Roulette</option>
+        </select>
+      </div>
+      <div style="flex:2;min-width:200px;">
+        <label style="font-size:0.72rem;color:#556;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Gamemode Template <small style="color:#334;font-weight:400;text-transform:none;">(bingo only)</small></label>
         <select id="ev-gamemode" style="width:100%;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:8px 10px;font-size:0.85rem;">
           <option value="">— Blank board (no template) —</option>
         </select>
@@ -251,10 +261,71 @@
     <div class="board-grid" id="board-grid"></div>
   </section>
 
-  <!-- Submissions -->
+  <!-- Submissions (bingo) -->
   <section id="submissions-section" style="display:none">
     <h2>Submissions</h2>
     <div id="submissions-content">Loading...</div>
+  </section>
+
+  <!-- Roulette quick link -->
+  <section id="roulette-link-section" style="display:none;padding:14px 20px;">
+    <a id="roulette-page-link" href="/roulette.html" target="_blank"
+       style="display:inline-flex;align-items:center;gap:8px;background:#1a0a2e;border:2px solid #9b3dc8;color:#c89b3c;border-radius:6px;padding:10px 18px;font-weight:bold;font-size:0.9rem;text-decoration:none;">
+      🎰 Open Roulette Player Page
+    </a>
+    <span style="font-size:0.78rem;color:#556;margin-left:12px;">Players use this page to spin wheels and submit drops</span>
+  </section>
+
+  <!-- Roulette Config -->
+  <section id="roulette-config-section" style="display:none">
+    <h2>🎰 Roulette Settings</h2>
+    <div class="form-row" style="gap:16px;flex-wrap:wrap;align-items:flex-end;">
+      <div>
+        <label style="font-size:0.72rem;color:#556;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Starting Bank</label>
+        <input type="number" id="rl-starting-bank" value="500" min="0" style="width:110px;">
+      </div>
+      <div>
+        <label style="font-size:0.72rem;color:#556;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Re-spin Cost</label>
+        <input type="number" id="rl-respin-cost" value="200" min="0" style="width:110px;">
+      </div>
+      <div>
+        <label style="font-size:0.72rem;color:#556;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Bonus Value</label>
+        <input type="number" id="rl-bonus-value" value="100" min="0" style="width:110px;">
+      </div>
+      <button class="btn btn-gold" onclick="saveRouletteConfig()">Save Config</button>
+      <span id="rl-config-status" class="save-notice"></span>
+    </div>
+  </section>
+
+  <!-- Roulette Team Banks -->
+  <section id="roulette-banks-section" style="display:none">
+    <h2>🏦 Team Banks</h2>
+    <div id="roulette-banks-content" style="display:flex;flex-wrap:wrap;gap:12px;"></div>
+    <div style="margin-top:14px;">
+      <h3 style="margin-bottom:8px;">Manual Bank Adjustment</h3>
+      <div class="form-row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div>
+          <label style="font-size:0.72rem;color:#556;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Team</label>
+          <select id="rl-adj-team" style="background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:8px 10px;font-size:0.85rem;"></select>
+        </div>
+        <div>
+          <label style="font-size:0.72rem;color:#556;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Amount (+/−)</label>
+          <input type="number" id="rl-adj-amount" placeholder="e.g. -100" style="width:130px;">
+        </div>
+        <div>
+          <label style="font-size:0.72rem;color:#556;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Reason</label>
+          <input type="text" id="rl-adj-reason" placeholder="Admin adjustment" style="width:200px;">
+        </div>
+        <button class="btn btn-blue" onclick="doBankAdjust()">Apply</button>
+        <span id="rl-adj-status" class="save-notice"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Roulette Submissions -->
+  <section id="roulette-submissions-section" style="display:none">
+    <h2>🎰 Drop Submissions</h2>
+    <div id="roulette-submissions-content">Loading...</div>
   </section>
 
 </div>
@@ -428,6 +499,7 @@ async function submitNewEvent() {
   const team1_name = (teamInputs[0]?.value || '').trim() || 'Team 1';
   const team2_name = (teamInputs[1]?.value || '').trim() || 'Team 2';
   const gamemode_id = document.getElementById('ev-gamemode').value || null;
+  const game_type = document.getElementById('ev-gametype').value || 'bingo';
   const statusEl = document.getElementById('create-status');
   if (!name || !code_word) {
     statusEl.style.color = '#e05050'; statusEl.textContent = 'Event name and code word are required.'; return;
@@ -437,7 +509,7 @@ async function submitNewEvent() {
     const res = await adminFetch('/api/admin/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, code_word, team1_name, team2_name, gamemode_id })
+      body: JSON.stringify({ name, code_word, team1_name, team2_name, gamemode_id, game_type })
     });
     const data = await res.json();
     if (data.id) {
@@ -471,11 +543,16 @@ async function submitNewEvent() {
 async function selectEvent(ev) {
   selectedEventId = ev.id;
   selectedEventData = ev;
+  const isRoulette = ev.game_type === 'roulette';
 
   document.getElementById('edit-section').style.display = 'block';
   document.getElementById('roster-section').style.display = 'block';
-  document.getElementById('board-section').style.display = 'block';
-  document.getElementById('submissions-section').style.display = 'block';
+  document.getElementById('board-section').style.display = isRoulette ? 'none' : 'block';
+  document.getElementById('submissions-section').style.display = isRoulette ? 'none' : 'block';
+  document.getElementById('roulette-link-section').style.display = isRoulette ? 'block' : 'none';
+  document.getElementById('roulette-config-section').style.display = isRoulette ? 'block' : 'none';
+  document.getElementById('roulette-banks-section').style.display = isRoulette ? 'block' : 'none';
+  document.getElementById('roulette-submissions-section').style.display = isRoulette ? 'block' : 'none';
 
   document.getElementById('edit-event-name').textContent = ev.name;
   document.getElementById('edit-name').value = ev.name;
@@ -488,17 +565,23 @@ async function selectEvent(ev) {
     if (el.querySelector('.ev-name')?.textContent === ev.name) el.classList.add('selected');
   });
 
-  // Load teams and render dynamic editors
   const teamsRes = await adminFetch(`/api/admin/events/${selectedEventId}/teams`);
   const teams = await teamsRes.json();
   selectedTeamsList = teams;
   renderTeamEditor(teams);
   renderRosterPanels(teams);
 
-  await loadBoardData();
-  initGrid();
-  loadMembers();
-  loadSubmissions();
+  if (isRoulette) {
+    loadMembers();
+    loadRouletteConfig();
+    loadRouletteBanks();
+    loadRouletteSubmissions();
+  } else {
+    await loadBoardData();
+    initGrid();
+    loadMembers();
+    loadSubmissions();
+  }
 }
 
 function renderTeamEditor(teams) {
@@ -1100,6 +1183,146 @@ async function saveAsGamemode() {
     statusEl.textContent = 'Network error.';
     setTimeout(() => { statusEl.textContent = ''; statusEl.style.color = '#50c878'; }, 3000);
   }
+}
+
+// ── Roulette Admin ───────────────────────────────────────
+
+async function loadRouletteConfig() {
+  try {
+    const res = await fetch(`/api/roulette/events/${selectedEventId}/state`);
+    const data = await res.json();
+    const cfg = data.config || {};
+    document.getElementById('rl-starting-bank').value = cfg.starting_bank ?? 500;
+    document.getElementById('rl-respin-cost').value = cfg.respin_cost ?? 200;
+    document.getElementById('rl-bonus-value').value = cfg.bonus_value ?? 100;
+  } catch {}
+}
+
+async function saveRouletteConfig() {
+  const statusEl = document.getElementById('rl-config-status');
+  statusEl.style.color = '#888'; statusEl.textContent = 'Saving...';
+  try {
+    const res = await adminFetch(`/api/admin/roulette/events/${selectedEventId}/config`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        starting_bank: parseInt(document.getElementById('rl-starting-bank').value) || 500,
+        respin_cost: parseInt(document.getElementById('rl-respin-cost').value) || 200,
+        bonus_value: parseInt(document.getElementById('rl-bonus-value').value) || 100
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      statusEl.style.color = '#50c878'; statusEl.textContent = 'Saved!';
+      loadRouletteBanks();
+    } else {
+      statusEl.style.color = '#e05050'; statusEl.textContent = data.error || 'Save failed.';
+    }
+    setTimeout(() => { statusEl.textContent = ''; }, 2500);
+  } catch {
+    statusEl.style.color = '#e05050'; statusEl.textContent = 'Network error.';
+  }
+}
+
+async function loadRouletteBanks() {
+  try {
+    const res = await fetch(`/api/roulette/events/${selectedEventId}/state`);
+    const data = await res.json();
+    const el = document.getElementById('roulette-banks-content');
+    const TEAM_COLORS = ['#4a7fc1','#c85a1a','#3db560','#9b3dc8','#c8b240','#c83d6a'];
+    el.innerHTML = (data.teams || []).map(t => {
+      const color = TEAM_COLORS[(t.team_number - 1) % TEAM_COLORS.length];
+      return `<div style="background:#0a0f1e;border:1px solid #1e2a40;border-left:3px solid ${color};border-radius:6px;padding:14px 18px;min-width:160px;">
+        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:${color};margin-bottom:4px;">${escHtml(t.team_name)}</div>
+        <div style="font-size:2rem;font-weight:bold;color:#c89b3c;line-height:1;">${(t.bank||0).toLocaleString()}</div>
+        <div style="font-size:0.72rem;color:#4a7fc1;margin-top:3px;">${t.completed_count} bosses done</div>
+      </div>`;
+    }).join('') || 'No teams.';
+    // Populate adj team select
+    const sel = document.getElementById('rl-adj-team');
+    sel.innerHTML = (data.teams || []).map(t => `<option value="${t.team_number}">${escHtml(t.team_name)}</option>`).join('');
+  } catch {}
+}
+
+async function doBankAdjust() {
+  const team = document.getElementById('rl-adj-team').value;
+  const amount = parseInt(document.getElementById('rl-adj-amount').value);
+  const reason = document.getElementById('rl-adj-reason').value.trim() || 'Admin adjustment';
+  const statusEl = document.getElementById('rl-adj-status');
+  if (!team || isNaN(amount)) { statusEl.style.color='#e05050'; statusEl.textContent='Team and amount required.'; return; }
+  try {
+    const res = await adminFetch(`/api/admin/roulette/events/${selectedEventId}/bank-adjust`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ team: parseInt(team), amount, reason })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      statusEl.style.color='#50c878'; statusEl.textContent=`Applied ${amount > 0 ? '+' : ''}${amount} pts`;
+      document.getElementById('rl-adj-amount').value = '';
+      loadRouletteBanks();
+    } else {
+      statusEl.style.color='#e05050'; statusEl.textContent=data.error || 'Failed.';
+    }
+    setTimeout(() => { statusEl.textContent = ''; }, 2500);
+  } catch { statusEl.style.color='#e05050'; statusEl.textContent='Network error.'; }
+}
+
+async function loadRouletteSubmissions() {
+  try {
+    const res = await adminFetch(`/api/admin/roulette/events/${selectedEventId}/submissions`);
+    const subs = await res.json();
+    const el = document.getElementById('roulette-submissions-content');
+    if (!subs.length) { el.textContent = 'No submissions yet.'; return; }
+    el.innerHTML = `
+      <table class="submissions-table">
+        <thead><tr><th>Player</th><th>Team</th><th>Boss</th><th>Drop</th><th>Bonus</th><th>Screenshot</th><th>Status</th><th>Pts</th><th>Actions</th></tr></thead>
+        <tbody>${subs.map(s => `
+          <tr id="rsub-row-${s.id}">
+            <td>${escHtml(s.player_name)}</td>
+            <td>${escHtml(s.team_name || 'Team ' + s.team)}</td>
+            <td>${escHtml(s.boss_name)}</td>
+            <td>${escHtml(s.drop_name)}</td>
+            <td style="color:#3db560;">${s.bonus_item ? escHtml(s.bonus_item) : '—'}</td>
+            <td><img src="/${escHtml(s.screenshot_path)}" onclick="previewImg(this.src)" alt="screenshot"></td>
+            <td><span class="sub-${s.status}">${s.status}</span></td>
+            <td style="color:#c89b3c;">${s.status === 'approved' ? '+' + ((s.points_awarded||0)+(s.bonus_points||0)) : '—'}</td>
+            <td style="white-space:nowrap;">
+              ${s.status === 'pending'
+                ? `<button class="btn btn-green" style="font-size:0.72rem;padding:3px 8px;margin-right:4px;" onclick="approveRouletteSubmission(${s.id})">Approve</button>
+                   <button class="btn btn-red" style="font-size:0.72rem;padding:3px 8px;background:#4a1010;" onclick="rejectRouletteSubmission(${s.id})">Reject</button>`
+                : `<span style="color:#445;font-size:0.72rem;">${s.status}</span>`
+              }
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch (err) {
+    document.getElementById('roulette-submissions-content').textContent = 'Failed to load.';
+  }
+}
+
+async function approveRouletteSubmission(id) {
+  const res = await adminFetch(`/api/admin/roulette/submissions/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'approved' })
+  });
+  const data = await res.json();
+  if (data.ok) { loadRouletteSubmissions(); loadRouletteBanks(); }
+  else alert(data.error || 'Approval failed.');
+}
+
+async function rejectRouletteSubmission(id) {
+  if (!confirm('Reject this submission?')) return;
+  const res = await adminFetch(`/api/admin/roulette/submissions/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'rejected' })
+  });
+  const data = await res.json();
+  if (data.ok) { loadRouletteSubmissions(); loadRouletteBanks(); }
+  else alert(data.error || 'Reject failed.');
 }
 
 checkAuth().then(ok => { if (ok) { loadEvents(); loadGamemodes(); } });

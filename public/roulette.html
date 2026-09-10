@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veritas Roulette</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d0f1a; color: #e0d5b7; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+body::before { content: ''; position: fixed; inset: 0; background: url('/osrs-map.png') center/cover no-repeat; filter: blur(3px) brightness(0.35); opacity: 0.28; z-index: -1; transform: scale(1.04); pointer-events: none; }
+
+header { background: #111827; border-bottom: 2px solid #c89b3c; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+header h1 { color: #c89b3c; font-size: 1.2rem; letter-spacing: 0.05em; }
+header a { color: #4a7fc1; font-size: 0.85rem; text-decoration: none; }
+
+.landing { display: flex; align-items: center; justify-content: center; min-height: 80vh; }
+.landing-box { background: #111827; border: 1px solid #2a3a54; border-top: 3px solid #c89b3c; border-radius: 10px; padding: 36px; max-width: 420px; width: 100%; text-align: center; }
+.landing-box h2 { color: #c89b3c; margin-bottom: 8px; font-size: 1.3rem; }
+.landing-box p { color: #556; font-size: 0.85rem; margin-bottom: 20px; }
+.landing-events { display: flex; flex-direction: column; gap: 8px; }
+.landing-ev-btn { background: #0f1e3a; border: 2px solid #1e2a40; border-radius: 6px; padding: 12px 18px; text-align: left; cursor: pointer; color: #e0d5b7; transition: border-color 0.2s; }
+.landing-ev-btn:hover { border-color: #c89b3c66; }
+.landing-ev-name { font-weight: bold; display: block; }
+.landing-ev-meta { font-size: 0.75rem; color: #556; margin-top: 3px; }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+.hidden { display: none !important; }
+
+/* Banks */
+.banks-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.bank-card { flex: 1; min-width: 160px; background: #111827; border: 1px solid #1e2a40; border-radius: 8px; padding: 14px 18px; }
+.bank-name { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+.bank-amount { font-size: 2rem; font-weight: bold; color: #c89b3c; line-height: 1; }
+.bank-pts { font-size: 0.75rem; color: #556; }
+.bank-completed { font-size: 0.72rem; color: #4a7fc1; margin-top: 4px; }
+
+/* Wheels section */
+.wheels-section { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 24px; justify-content: center; }
+.wheel-panel { background: #111827; border: 1px solid #1e2a40; border-radius: 10px; padding: 20px; flex: 1; min-width: 280px; max-width: 400px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.wheel-title { font-size: 0.85rem; color: #c89b3c; text-transform: uppercase; letter-spacing: 0.08em; font-weight: bold; }
+.wheel-title span { color: #4a7fc1; font-size: 0.7rem; font-weight: normal; margin-left: 6px; }
+.wheel-wrap { position: relative; }
+.wheel-pointer { position: absolute; top: -4px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 28px solid #c89b3c; z-index: 10; filter: drop-shadow(0 2px 4px #000a); }
+canvas { border-radius: 50%; display: block; }
+.spin-controls { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.spin-team-row { display: flex; gap: 8px; align-items: center; }
+.spin-team-row select { flex: 1; background: #0f1e3a; color: #e0d5b7; border: 1px solid #2a3a54; border-radius: 4px; padding: 7px 10px; font-size: 0.85rem; }
+.btn { padding: 9px 18px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: background 0.15s; white-space: nowrap; }
+.btn-spin { background: #c89b3c; color: #0d0f1a; width: 100%; padding: 10px; }
+.btn-spin:hover { background: #e0b84a; }
+.btn-spin:disabled { background: #4a3500; color: #887040; cursor: not-allowed; }
+.spin-result { font-size: 0.8rem; min-height: 2.5em; text-align: center; padding: 8px; background: #080d1a; border-radius: 5px; width: 100%; }
+.spin-result .boss-name { color: #c89b3c; font-weight: bold; font-size: 0.95rem; }
+.spin-result .bonus-item { color: #3db560; }
+.spin-result .cost-note { color: #e05050; font-size: 0.72rem; }
+
+/* Active assignments */
+.assignments { background: #111827; border: 1px solid #1e2a40; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+.assignments h2 { color: #c89b3c; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+.assignment-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.assignment-card { background: #0a0f1e; border: 1px solid #1e2a40; border-radius: 6px; padding: 12px 14px; min-width: 200px; flex: 1; }
+.asgn-team { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+.asgn-boss { font-size: 1rem; font-weight: bold; color: #e0d5b7; }
+.asgn-tier { font-size: 0.65rem; color: #4a7fc1; margin-left: 6px; }
+.asgn-bonus { font-size: 0.75rem; color: #3db560; margin-top: 4px; }
+.asgn-bonus span { color: #c89b3c; }
+.asgn-submit { margin-top: 8px; }
+.btn-submit-drop { background: #1e5a2a; color: #6bff9e; border: none; border-radius: 4px; padding: 5px 12px; font-size: 0.78rem; cursor: pointer; }
+.btn-submit-drop:hover { background: #256b33; }
+.asgn-pending { font-size: 0.72rem; color: #ffd700; background: #4a3500; padding: 2px 8px; border-radius: 10px; display: inline-block; margin-top: 6px; }
+.no-assignments { color: #445; font-size: 0.85rem; }
+
+/* History */
+.history { background: #111827; border: 1px solid #1e2a40; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+.history h2 { color: #c89b3c; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+.history-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.history-table th { text-align: left; color: #556; padding: 5px 8px; border-bottom: 1px solid #1e2a40; }
+.history-table td { padding: 5px 8px; border-bottom: 1px solid #141c2e; }
+.badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; }
+.badge-active { background: #0f3a1e; color: #3db560; }
+.badge-completed { background: #1a3a1a; color: #6bff9e; }
+.badge-pending { background: #4a3500; color: #ffd700; }
+.badge-respin { background: #2a1a0a; color: #c85a1a; }
+
+/* Submit modal */
+.modal-bg { display: none; position: fixed; inset: 0; background: #000b; backdrop-filter: blur(3px); z-index: 100; align-items: center; justify-content: center; }
+.modal-bg.open { display: flex; }
+.modal-box { background: #111827; border: 1px solid #2a3a54; border-top: 2px solid #c89b3c; border-radius: 10px; padding: 24px; width: 90%; max-width: 420px; }
+.modal-box h3 { color: #c89b3c; margin-bottom: 16px; }
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 0.72rem; color: #556; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+.form-group input, .form-group select { width: 100%; background: #0f1e3a; color: #e0d5b7; border: 1px solid #2a3a54; border-radius: 4px; padding: 8px 10px; font-size: 0.9rem; }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: #4a7fc1; }
+.modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+.btn-gray { background: #1e2a40; color: #9ab8d8; border: 1px solid #2a3a54; padding: 9px 18px; border-radius: 5px; cursor: pointer; font-size: 0.85rem; }
+.btn-gold { background: #c89b3c; color: #0d0f1a; font-weight: bold; }
+.btn-gold:hover { background: #e0b84a; }
+.submit-status { font-size: 0.82rem; min-height: 1.5em; margin-top: 8px; }
+.submit-status.error { color: #e05050; }
+.submit-status.success { color: #50c878; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎰 Veritas Roulette</h1>
+  <div style="display:flex;gap:16px;align-items:center;">
+    <a href="/">← Bingo Board</a>
+    <a href="/admin.html">Admin</a>
+  </div>
+</header>
+
+<div id="landing" class="landing">
+  <div class="landing-box">
+    <div style="font-size:2.5rem;margin-bottom:10px;">🎰</div>
+    <h2>Veritas Roulette</h2>
+    <p>Select an event to begin</p>
+    <div class="landing-events" id="landing-events">Loading...</div>
+  </div>
+</div>
+
+<div id="main-view" class="container hidden">
+
+  <div class="banks-row" id="banks-row"></div>
+
+  <div class="wheels-section">
+    <div class="wheel-panel">
+      <div class="wheel-title">Wheel 1 — High Tier <span>Raids · DT2 · Nex · Endgame</span></div>
+      <div class="wheel-wrap">
+        <div class="wheel-pointer"></div>
+        <canvas id="wheel1" width="300" height="300"></canvas>
+      </div>
+      <div class="spin-controls">
+        <div class="spin-team-row">
+          <select id="spin1-team"><option value="">Select team...</option></select>
+        </div>
+        <button class="btn btn-spin" id="btn-spin1" onclick="doSpin(1)">🎲 Spin Wheel 1</button>
+        <div class="spin-result" id="spin1-result">Select your team and spin!</div>
+      </div>
+    </div>
+
+    <div class="wheel-panel">
+      <div class="wheel-title">Wheel 2 — Mid Tier <span>GWD · Wildy · Instanced</span></div>
+      <div class="wheel-wrap">
+        <div class="wheel-pointer"></div>
+        <canvas id="wheel2" width="300" height="300"></canvas>
+      </div>
+      <div class="spin-controls">
+        <div class="spin-team-row">
+          <select id="spin2-team"><option value="">Select team...</option></select>
+        </div>
+        <button class="btn btn-spin" id="btn-spin2" onclick="doSpin(2)">🎲 Spin Wheel 2</button>
+        <div class="spin-result" id="spin2-result">Select your team and spin!</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="assignments">
+    <h2>Active Boss Assignments</h2>
+    <div class="assignment-grid" id="assignment-grid"></div>
+  </div>
+
+  <div class="history">
+    <h2>Spin History</h2>
+    <div style="overflow-x:auto;">
+      <table class="history-table">
+        <thead><tr><th>Time</th><th>Team</th><th>Wheel</th><th>Boss</th><th>Bonus Drop</th><th>Status</th><th>Points</th></tr></thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Submit Drop Modal -->
+<div class="modal-bg" id="submit-modal">
+  <div class="modal-box">
+    <h3>Submit Drop</h3>
+    <div class="form-group">
+      <label>Your RSN</label>
+      <input type="text" id="sub-rsn" placeholder="Your in-game name">
+    </div>
+    <div class="form-group">
+      <label>Active Boss</label>
+      <select id="sub-spin"></select>
+    </div>
+    <div class="form-group">
+      <label>Drop Received</label>
+      <select id="sub-drop"></select>
+    </div>
+    <div class="form-group">
+      <label>Screenshot <small style="color:#445;font-weight:400;text-transform:none;">(code word must be visible)</small></label>
+      <input type="file" id="sub-screenshot" accept="image/*">
+    </div>
+    <div id="sub-status" class="submit-status"></div>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeSubmitModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="doSubmit()">Submit Drop</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const socket = io();
+let currentEventId = null;
+let currentState = null;
+let allBosses = [];
+let spinning1 = false, spinning2 = false;
+let wheel1Rot = 0, wheel2Rot = 0;
+let submitTeamNum = null;
+
+const WHEEL_COLORS = [
+  '#4a7fc1','#c85a1a','#3db560','#9b3dc8','#c8b240','#c83d6a',
+  '#2a8a8a','#8a5a2a','#7a4a90','#4a9070','#904a4a','#207a7a','#7a6020'
+];
+
+// ── Landing ──────────────────────────────────────────────────
+async function loadEvents() {
+  const res = await fetch('/api/events');
+  const events = await res.json();
+  const el = document.getElementById('landing-events');
+  const roulette = events.filter(ev => ev.game_type === 'roulette');
+  if (!roulette.length) { el.innerHTML = '<p style="color:#556;font-size:0.85rem;">No active roulette events.</p>'; return; }
+  el.innerHTML = '';
+  roulette.forEach(ev => {
+    const btn = document.createElement('button');
+    btn.className = 'landing-ev-btn';
+    btn.innerHTML = `<span class="landing-ev-name">${escHtml(ev.name)}</span><span class="landing-ev-meta">${ev.status}</span>`;
+    btn.onclick = () => selectEvent(ev.id);
+    el.appendChild(btn);
+  });
+}
+
+async function selectEvent(id) {
+  currentEventId = id;
+  document.getElementById('landing').classList.add('hidden');
+  document.getElementById('main-view').classList.remove('hidden');
+  socket.emit('join-event', id);
+  await loadBosses();
+  await loadState();
+}
+
+// ── Bosses ───────────────────────────────────────────────────
+async function loadBosses() {
+  const res = await fetch('/api/roulette/bosses');
+  allBosses = await res.json();
+  drawWheel(document.getElementById('wheel1'), allBosses.filter(b => b.wheel_tier === 1), wheel1Rot);
+  drawWheel(document.getElementById('wheel2'), allBosses.filter(b => b.wheel_tier === 2), wheel2Rot);
+}
+
+// ── State ────────────────────────────────────────────────────
+async function loadState() {
+  if (!currentEventId) return;
+  const res = await fetch(`/api/roulette/events/${currentEventId}/state`);
+  if (!res.ok) return;
+  currentState = await res.json();
+  renderState();
+}
+
+socket.on('board-update', ({ eventId }) => {
+  if (String(eventId) === String(currentEventId)) loadState();
+});
+
+function renderState() {
+  const { teams, history, config } = currentState;
+
+  // Team selectors
+  const teamOpts = '<option value="">Select team...</option>' +
+    teams.map(t => `<option value="${t.team_number}">${escHtml(t.team_name)}</option>`).join('');
+  document.getElementById('spin1-team').innerHTML = teamOpts;
+  document.getElementById('spin2-team').innerHTML = teamOpts;
+
+  // Banks
+  document.getElementById('banks-row').innerHTML = teams.map(t => {
+    const color = teamColors(t.team_number);
+    return `<div class="bank-card" style="border-left:3px solid ${color};">
+      <div class="bank-name" style="color:${color};">${escHtml(t.team_name)}</div>
+      <div class="bank-amount">${t.bank.toLocaleString()}</div>
+      <div class="bank-pts">points</div>
+      <div class="bank-completed">${t.completed_count} boss${t.completed_count !== 1 ? 'es' : ''} completed</div>
+    </div>`;
+  }).join('');
+
+  // Active assignments
+  const allActive = teams.flatMap(t =>
+    t.active_spins.map(s => ({ ...s, team_name: t.team_name, team_number: t.team_number }))
+  );
+  const grid = document.getElementById('assignment-grid');
+  if (!allActive.length) {
+    grid.innerHTML = '<div class="no-assignments">No active boss assignments — spin a wheel!</div>';
+  } else {
+    grid.innerHTML = allActive.map(s => {
+      const color = teamColors(s.team_number);
+      const tierLabel = s.wheel_tier === 1 ? 'Wheel 1 · High Tier' : 'Wheel 2 · Mid Tier';
+      const bonusHtml = s.bonus_item
+        ? `<div class="asgn-bonus">🎯 Bonus: <span>${escHtml(s.bonus_item)}</span> (+${config.bonus_value} pts if obtained)</div>`
+        : '';
+      return `<div class="assignment-card" style="border-left:3px solid ${color};">
+        <div class="asgn-team" style="color:${color};">${escHtml(s.team_name)}</div>
+        <div class="asgn-boss">${escHtml(s.boss_name)} <span class="asgn-tier">${tierLabel}</span></div>
+        ${bonusHtml}
+        <div class="asgn-submit">
+          <button class="btn-submit-drop" onclick="openSubmitModal(${s.team_number}, ${s.id})">Submit Drop</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // History
+  document.getElementById('history-body').innerHTML = history.map(h => {
+    const color = teamColors(h.team);
+    const statusBadge = h.status === 'completed'
+      ? `<span class="badge badge-completed">✓ Done</span>`
+      : `<span class="badge badge-active">● Active</span>`;
+    const pts = h.status === 'completed'
+      ? `+${(h.points_awarded || 0) + (h.bonus_points || 0)}`
+      : h.sub_status === 'pending' ? '<span class="badge badge-pending">Pending</span>' : '—';
+    return `<tr>
+      <td style="color:#445;white-space:nowrap;">${timeAgo(h.created_at)}</td>
+      <td style="color:${color};font-weight:600;">${escHtml(h.team_name)}</td>
+      <td style="color:#4a7fc1;">W${h.wheel_tier}</td>
+      <td>${escHtml(h.boss_name)}</td>
+      <td style="color:#3db560;">${h.bonus_item ? escHtml(h.bonus_item) : '—'}</td>
+      <td>${statusBadge}</td>
+      <td style="color:#c89b3c;">${pts}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Wheel drawing ─────────────────────────────────────────────
+function drawWheel(canvas, bosses, rotation) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H / 2;
+  const r = Math.min(cx, cy) - 6;
+  const n = bosses.length;
+  const seg = (Math.PI * 2) / n;
+
+  ctx.clearRect(0, 0, W, H);
+  if (!n) {
+    ctx.fillStyle = '#1e2a40'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#556'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('No bosses', cx, cy); return;
+  }
+
+  bosses.forEach((b, i) => {
+    const start = rotation + i * seg, end = start + seg;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, start, end); ctx.closePath();
+    ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length]; ctx.fill();
+    ctx.strokeStyle = '#0a0f1a'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(start + seg / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#fff';
+    const fs = n > 15 ? 8 : (n > 10 ? 9 : 11);
+    ctx.font = `bold ${fs}px sans-serif`;
+    const name = b.boss_name.length > 16 ? b.boss_name.slice(0, 15) + '…' : b.boss_name;
+    ctx.shadowColor = '#000'; ctx.shadowBlur = 2;
+    ctx.fillText(name, r - 8, fs / 2);
+    ctx.restore();
+  });
+
+  // Gold rim
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#c89b3c'; ctx.lineWidth = 3; ctx.stroke();
+  // Center hub
+  ctx.beginPath(); ctx.arc(cx, cy, 16, 0, Math.PI * 2);
+  ctx.fillStyle = '#0a0f1a'; ctx.fill();
+  ctx.strokeStyle = '#c89b3c66'; ctx.lineWidth = 2; ctx.stroke();
+}
+
+// ── Spin ──────────────────────────────────────────────────────
+async function doSpin(tier) {
+  if (tier === 1 && spinning1) return;
+  if (tier === 2 && spinning2) return;
+
+  const teamEl = document.getElementById(`spin${tier}-team`);
+  const teamNum = teamEl.value;
+  if (!teamNum) { alert('Select your team first.'); return; }
+
+  const btn = document.getElementById(`btn-spin${tier}`);
+  const resultEl = document.getElementById(`spin${tier}-result`);
+  btn.disabled = true; resultEl.textContent = 'Spinning…';
+
+  try {
+    const res = await fetch(`/api/roulette/events/${currentEventId}/spin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ team: teamNum, wheel_tier: tier })
+    });
+    const data = await res.json();
+    if (!res.ok) { resultEl.innerHTML = `<span style="color:#e05050;">${escHtml(data.error)}</span>`; btn.disabled = false; return; }
+
+    // Animate
+    const canvas = document.getElementById(`wheel${tier}`);
+    const bosses = allBosses.filter(b => b.wheel_tier === tier);
+    if (tier === 1) spinning1 = true; else spinning2 = true;
+
+    spinAnimation(canvas, bosses, data.boss_index, tier === 1 ? wheel1Rot : wheel2Rot, finalRot => {
+      if (tier === 1) { wheel1Rot = finalRot; spinning1 = false; }
+      else { wheel2Rot = finalRot; spinning2 = false; }
+      btn.disabled = false;
+      resultEl.innerHTML =
+        `<div class="boss-name">🐉 ${escHtml(data.boss.boss_name)}</div>` +
+        (data.bonus_drop ? `<div class="bonus-item">🎯 Bonus: ${escHtml(data.bonus_drop.item_name)} (+${currentState?.config?.bonus_value || 100} pts)</div>` : '') +
+        (data.spin_cost > 0 ? `<div class="cost-note">Re-spin cost: −${data.spin_cost} pts</div>` : '');
+    });
+  } catch (err) {
+    resultEl.innerHTML = `<span style="color:#e05050;">Error — try again.</span>`;
+    btn.disabled = false;
+  }
+}
+
+function spinAnimation(canvas, bosses, targetIdx, currentRot, onDone) {
+  const n = bosses.length;
+  const seg = (Math.PI * 2) / n;
+  const bossCenter = targetIdx * seg + seg / 2;
+  let target = -Math.PI / 2 - bossCenter;
+  while (target <= currentRot) target += Math.PI * 2;
+  target += Math.PI * 2 * 6; // extra spins
+
+  const startRot = currentRot;
+  const startTime = performance.now();
+  const duration = 4800;
+
+  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+  function frame(now) {
+    const t = Math.min((now - startTime) / duration, 1);
+    const rot = startRot + (target - startRot) * easeOut(t);
+    drawWheel(canvas, bosses, rot);
+    if (t < 1) requestAnimationFrame(frame);
+    else onDone(rot % (Math.PI * 2));
+  }
+  requestAnimationFrame(frame);
+}
+
+// ── Submit modal ──────────────────────────────────────────────
+function openSubmitModal(teamNum, spinId) {
+  submitTeamNum = teamNum;
+  document.getElementById('sub-status').textContent = '';
+  document.getElementById('sub-screenshot').value = '';
+
+  // Populate spin selector with all active spins for this team
+  const team = currentState?.teams?.find(t => t.team_number === teamNum);
+  const spinSel = document.getElementById('sub-spin');
+  spinSel.innerHTML = (team?.active_spins || []).map(s =>
+    `<option value="${s.id}" data-boss="${s.boss_id}"${s.id === spinId ? ' selected' : ''}>${escHtml(s.boss_name)} (Wheel ${s.wheel_tier})</option>`
+  ).join('');
+
+  populateDrops();
+  spinSel.addEventListener('change', populateDrops);
+
+  document.getElementById('submit-modal').classList.add('open');
+}
+
+function populateDrops() {
+  const spinSel = document.getElementById('sub-spin');
+  const bossId = parseInt(spinSel.options[spinSel.selectedIndex]?.dataset.boss);
+  const boss = allBosses.find(b => b.id === bossId);
+  const dropSel = document.getElementById('sub-drop');
+  dropSel.innerHTML = (boss?.drops || []).map(d =>
+    `<option value="${d.id}">${escHtml(d.item_name)} (${d.base_points} pts)</option>`
+  ).join('');
+}
+
+function closeSubmitModal() { document.getElementById('submit-modal').classList.remove('open'); }
+
+async function doSubmit() {
+  const rsn = document.getElementById('sub-rsn').value.trim();
+  const spinId = document.getElementById('sub-spin').value;
+  const dropId = document.getElementById('sub-drop').value;
+  const file = document.getElementById('sub-screenshot').files[0];
+  const statusEl = document.getElementById('sub-status');
+
+  if (!rsn) { statusEl.className = 'submit-status error'; statusEl.textContent = 'Enter your RSN.'; return; }
+  if (!spinId) { statusEl.className = 'submit-status error'; statusEl.textContent = 'Select a boss.'; return; }
+  if (!dropId) { statusEl.className = 'submit-status error'; statusEl.textContent = 'Select the drop you received.'; return; }
+  if (!file) { statusEl.className = 'submit-status error'; statusEl.textContent = 'Upload a screenshot.'; return; }
+
+  statusEl.className = 'submit-status'; statusEl.textContent = 'Verifying screenshot…';
+
+  const form = new FormData();
+  form.append('player_name', rsn);
+  form.append('team', submitTeamNum);
+  form.append('spin_id', spinId);
+  form.append('drop_id', dropId);
+  form.append('screenshot', file);
+
+  try {
+    const res = await fetch(`/api/roulette/events/${currentEventId}/submit`, { method: 'POST', body: form });
+    const data = await res.json();
+    if (data.ok) {
+      statusEl.className = 'submit-status success'; statusEl.textContent = 'Submitted! Awaiting admin approval.';
+      setTimeout(closeSubmitModal, 2000);
+    } else {
+      statusEl.className = 'submit-status error'; statusEl.textContent = data.error || 'Submission failed.';
+    }
+  } catch {
+    statusEl.className = 'submit-status error'; statusEl.textContent = 'Network error — try again.';
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+const COLORS = ['#4a7fc1','#c85a1a','#3db560','#9b3dc8','#c8b240','#c83d6a'];
+function teamColors(n) { return COLORS[(n - 1) % COLORS.length]; }
+
+function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function timeAgo(d) {
+  const s = Math.floor((Date.now() - new Date(d.endsWith('Z') ? d : d + 'Z')) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+loadEvents();
+</script>
+</body>
+</html>

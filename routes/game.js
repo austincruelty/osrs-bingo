@@ -142,7 +142,7 @@ module.exports = function makeGameRouter(broadcast) {
 
   router.get('/events', (req, res, next) => {
     try {
-      const events = db.all('SELECT id, name, status FROM events ORDER BY created_at DESC');
+      const events = db.all('SELECT id, name, status, game_type FROM events ORDER BY created_at DESC');
       res.json(events.map(ev => ({
         ...ev,
         teams: db.all('SELECT team_number, team_name FROM event_teams WHERE event_id = ? ORDER BY team_number', [ev.id])
