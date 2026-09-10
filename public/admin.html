@@ -133,6 +133,8 @@
     .boss-drops-body { padding:8px 10px 10px; border-top:1px solid #1e2a40; display:none; }
     .boss-drops-body.open { display:block; }
     .drop-row { display:flex; gap:5px; align-items:center; margin-bottom:5px; }
+    .drop-sprite-sm { width:26px; height:26px; object-fit:contain; image-rendering:pixelated; flex-shrink:0; transition:opacity 0.2s; }
+    .drop-sprite-sm[data-broken] { opacity:0.15; }
     .drop-name-inp { flex:1; min-width:0; font-size:0.82rem; padding:5px 8px; }
     .drop-pts-inp { width:64px; flex-shrink:0; font-size:0.82rem; padding:5px 8px; text-align:center; }
     .drop-action-btn { font-size:0.72rem; padding:4px 8px; flex-shrink:0; }
@@ -865,15 +867,17 @@ function openTileModal(row, col, tile, droppedBoss = null) {
   document.getElementById('tile-modal').classList.add('open');
 }
 
+function wikiSpriteUrl(name) {
+  return `https://oldschool.runescape.wiki/w/Special:FilePath/${(name || '').trim().replace(/ /g, '_')}.png`;
+}
+
 function itemSpriteUrl(name, wikiImage) {
   if (wikiImage && wikiImage.trim()) {
     const fn = wikiImage.trim().replace(/\.png$/i, '');
-    return `https://oldschool.runescape.wiki/images/${encodeURIComponent(fn)}.png`;
+    return wikiSpriteUrl(fn);
   }
-  // Strip quantity suffixes like "x5" or "5x" before building wiki URL
   const clean = (name || '').trim().replace(/\s+x\d+$/i, '').replace(/^\d+x\s+/i, '').trim();
-  const wikiName = clean.charAt(0).toUpperCase() + clean.slice(1).replace(/ /g, '_');
-  return `https://oldschool.runescape.wiki/images/${encodeURIComponent(wikiName)}.png`;
+  return wikiSpriteUrl(clean);
 }
 
 function addItemRow(value = '', qty = 1, wikiImage = '', itemId = null) {
@@ -1144,8 +1148,7 @@ const BOSSES = [
 ];
 
 function bossImgUrl(boss) {
-  if (boss.img) return `https://oldschool.runescape.wiki/images/${encodeURIComponent(boss.img)}.png`;
-  return itemSpriteUrl(boss.name);
+  return wikiSpriteUrl(boss.img || boss.name);
 }
 
 function renderBossPalette() {
@@ -1455,7 +1458,10 @@ function bossCard(b) {
   const isOpen = _openBossId === b.id;
   const dropsHtml = b.drops.map(d => `
     <div class="drop-row" id="drop-row-${d.id}">
-      <input class="drop-name-inp" type="text" value="${escHtml(d.item_name)}" id="drop-name-${d.id}">
+      <img class="drop-sprite-sm" src="${wikiSpriteUrl(d.item_name)}" alt=""
+           onerror="this.setAttribute('data-broken','1')" title="${escHtml(d.item_name)}">
+      <input class="drop-name-inp" type="text" value="${escHtml(d.item_name)}" id="drop-name-${d.id}"
+             oninput="this.closest('.drop-row').querySelector('img').src=wikiSpriteUrl(this.value);this.closest('.drop-row').querySelector('img').removeAttribute('data-broken')">
       <input class="drop-pts-inp" type="number" value="${d.base_points}" id="drop-pts-${d.id}" min="0">
       <button class="btn btn-blue drop-action-btn" onclick="saveDrop(${d.id})">Save</button>
       <button class="btn btn-red drop-action-btn" onclick="deleteDrop(${d.id}, ${b.id})">✕</button>

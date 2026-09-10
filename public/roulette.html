@@ -418,15 +418,18 @@ function playFanfare() {
   } catch {}
 }
 
+function wikiSpriteUrl(name) {
+  return `https://oldschool.runescape.wiki/w/Special:FilePath/${(name || '').trim().replace(/ /g, '_')}.png`;
+}
+
 let _celebTimer = null;
 function showDropCelebration(drop) {
   const color = teamColors(drop.team);
-  const wikiName = (drop.submitted_item || '').replace(/ /g, '_');
   const pts = (drop.points_awarded || 0) + (drop.bonus_points || 0);
 
   document.getElementById('celeb-team').textContent = drop.team_name;
   document.getElementById('celeb-team').style.color = color;
-  document.getElementById('celeb-sprite').src = `https://oldschool.runescape.wiki/images/${wikiName}.png`;
+  document.getElementById('celeb-sprite').src = wikiSpriteUrl(drop.submitted_item);
   document.getElementById('celeb-sprite').style.display = '';
   document.getElementById('celeb-boss').textContent = drop.boss_name ? `from ${drop.boss_name}` : '';
   document.getElementById('celeb-item').textContent = drop.submitted_item || '';
@@ -634,8 +637,7 @@ function renderState() {
   } else {
     feedEl.innerHTML = approvedDrops.slice(0, 30).map(h => {
       const color = teamColors(h.team);
-      const wikiName = h.submitted_item.replace(/ /g, '_');
-      const spriteUrl = `https://oldschool.runescape.wiki/images/${wikiName}.png`;
+      const spriteUrl = wikiSpriteUrl(h.submitted_item);
       const pts = (h.points_awarded || 0) + (h.bonus_points || 0);
       const who = h.player_name ? ` · ${escHtml(h.player_name)}` : '';
       return `<div class="drop-entry">
