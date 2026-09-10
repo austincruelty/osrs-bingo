@@ -416,6 +416,34 @@ module.exports = function makeAdminRouter(broadcast) {
     res.json({ ok: true });
   });
 
+  router.delete('/events/:id', (req, res) => {
+    const id = req.params.id;
+    if (!db.get('SELECT id FROM events WHERE id = ?', [id])) return res.status(404).json({ error: 'Event not found' });
+    // cascade delete everything belonging to this event
+    db.run('DELETE FROM submissions WHERE event_id = ?', [id]);
+    db.run('DELETE FROM tile_items WHERE tile_id IN (SELECT id FROM tiles WHERE event_id = ?)', [id]);
+    db.run('DELETE FROM tile_item_groups WHERE tile_id IN (SELECT id FROM tiles WHERE event_id = ?)', [id]);
+    db.run('DELETE FROM tiles WHERE event_id = ?', [id]);
+    db.run('DELETE FROM team_members WHERE event_id = ?', [id]);
+    db.run('DELETE FROM event_teams WHERE event_id = ?', [id]);
+    try { db.run('DELETE FROM roulette_submissions WHERE event_id = ?', [id]); } catch {}
+    try { db.run('DELETE FROM roulette_spins WHERE event_id = ?', [id]); } catch {}
+    try { db.run('DELETE FROM roulette_bank_log WHERE event_id = ?', [id]); } catch {}
+    try { db.run('DELETE FROM roulette_event_config WHERE event_id = ?', [id]); } catch {}
+    db.run('DELETE FROM events WHERE id = ?', [id]);
+    res.json({ ok: true });
+  });
+
+  router.delete('/gamemodes/:id', (req, res) => {
+    const id = req.params.id;
+    if (!db.get('SELECT id FROM gamemodes WHERE id = ?', [id])) return res.status(404).json({ error: 'Gamemode not found' });
+    db.run('DELETE FROM gamemode_tile_items WHERE tile_id IN (SELECT id FROM gamemode_tiles WHERE gamemode_id = ?)', [id]);
+    db.run('DELETE FROM gamemode_tile_item_groups WHERE tile_id IN (SELECT id FROM gamemode_tiles WHERE gamemode_id = ?)', [id]);
+    db.run('DELETE FROM gamemode_tiles WHERE gamemode_id = ?', [id]);
+    db.run('DELETE FROM gamemodes WHERE id = ?', [id]);
+    res.json({ ok: true });
+  });
+
   router.delete('/submissions/:submissionId', (req, res) => {
     const sub = db.get('SELECT * FROM submissions WHERE id = ?', [req.params.submissionId]);
     if (!sub) return res.status(404).json({ error: 'Submission not found' });

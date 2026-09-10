@@ -182,9 +182,12 @@
       </div>
       <div style="flex:2;min-width:200px;">
         <label style="font-size:0.72rem;color:#556;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Gamemode Template <small style="color:#334;font-weight:400;text-transform:none;">(bingo only)</small></label>
-        <select id="ev-gamemode" style="width:100%;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:8px 10px;font-size:0.85rem;">
-          <option value="">— Blank board (no template) —</option>
-        </select>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <select id="ev-gamemode" style="flex:1;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:8px 10px;font-size:0.85rem;">
+            <option value="">— Blank board (no template) —</option>
+          </select>
+          <button class="btn btn-red" onclick="deleteSelectedGamemode()" title="Delete selected template" style="padding:8px 12px;flex-shrink:0;">✕</button>
+        </div>
       </div>
     </div>
     <div id="create-status" style="font-size:0.8rem;margin-top:8px;"></div>
@@ -439,11 +442,12 @@ async function loadEvents() {
       div.className = 'event-item' + (String(ev.id) === String(selectedEventId) ? ' selected' : '');
       const teamNames = (ev.teams || []).map(t => escHtml(t.team_name)).join(' vs ') || 'No teams';
       div.innerHTML = `
-        <div>
+        <div style="flex:1;min-width:0;">
           <div class="ev-name">${escHtml(ev.name)}</div>
           <div class="ev-meta">Code word: <b>${escHtml(ev.code_word)}</b> &nbsp;·&nbsp; ${teamNames}</div>
         </div>
         <span class="status-badge status-${ev.status}">${ev.status}</span>
+        <button class="btn btn-red" style="font-size:0.72rem;padding:3px 10px;flex-shrink:0;" onclick="event.stopPropagation();deleteEvent(${ev.id},'${escHtml(ev.name).replace(/'/g,"\\'")}')" title="Delete event">✕ Delete</button>
       `;
       div.onclick = () => selectEvent(ev);
       el.appendChild(div);
@@ -1145,6 +1149,24 @@ function bossSpriteDragStart(event, bossName) {
   event.dataTransfer.effectAllowed = 'copy';
 }
 
+async function deleteEvent(id, name) {
+  if (!confirm(`Delete event "${name}"?\n\nThis will permanently delete all tiles, submissions, roster, and spin history. This cannot be undone.`)) return;
+  const res = await adminFetch(`/api/admin/events/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.ok) {
+    if (String(selectedEventId) === String(id)) {
+      selectedEventId = null;
+      selectedEventData = null;
+      ['edit-section','roster-section','board-section','submissions-section',
+       'roulette-link-section','roulette-config-section','roulette-banks-section','roulette-submissions-section']
+        .forEach(s => { document.getElementById(s).style.display = 'none'; });
+    }
+    loadEvents();
+  } else {
+    alert(data.error || 'Delete failed.');
+  }
+}
+
 // ── Gamemodes ────────────────────────────────────────────
 
 async function loadGamemodes() {
@@ -1155,6 +1177,18 @@ async function loadGamemodes() {
     sel.innerHTML = '<option value="">— Blank board (no template) —</option>' +
       gamemodes.map(g => `<option value="${g.id}">${escHtml(g.name)}</option>`).join('');
   } catch {}
+}
+
+async function deleteSelectedGamemode() {
+  const sel = document.getElementById('ev-gamemode');
+  const id = sel.value;
+  const name = sel.options[sel.selectedIndex]?.text;
+  if (!id) { alert('Select a template to delete first.'); return; }
+  if (!confirm(`Delete gamemode template "${name}"?\n\nExisting events using it are not affected. This cannot be undone.`)) return;
+  const res = await adminFetch(`/api/admin/gamemodes/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.ok) { loadGamemodes(); }
+  else { alert(data.error || 'Delete failed.'); }
 }
 
 async function saveAsGamemode() {
