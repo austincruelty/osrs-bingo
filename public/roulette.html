@@ -362,7 +362,9 @@ function renderState() {
         <div class="asgn-boss">${escHtml(s.boss_name)} <span class="asgn-tier">${tierLabel}</span></div>
         ${bonusHtml}
         <div class="asgn-submit">
-          <button class="btn-submit-drop" onclick="openSubmitModal(${s.team_number}, ${s.id})">Submit Drop</button>
+          ${s.sub_status === 'pending'
+            ? `<span class="asgn-pending">⏳ Pending Admin Review</span>`
+            : `<button class="btn-submit-drop" onclick="openSubmitModal(${s.team_number}, ${s.id})">Submit Drop</button>`}
         </div>
       </div>`;
     }).join('');

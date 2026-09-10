@@ -1327,8 +1327,10 @@ async function loadRouletteSubmissions() {
             <td style="color:#c89b3c;">${s.status === 'approved' ? '+' + ((s.points_awarded||0)+(s.bonus_points||0)) : '—'}</td>
             <td style="white-space:nowrap;">
               ${s.status === 'pending'
-                ? `<button class="btn btn-green" style="font-size:0.72rem;padding:3px 8px;margin-right:4px;" onclick="approveRouletteSubmission(${s.id})">Approve</button>
-                   <button class="btn btn-red" style="font-size:0.72rem;padding:3px 8px;background:#4a1010;" onclick="rejectRouletteSubmission(${s.id})">Reject</button>`
+                ? `<button class="btn btn-green" style="font-size:0.72rem;padding:3px 8px;margin-right:4px;" onclick="approveRouletteSubmission(${s.id})">✓ Approve</button>
+                   <button class="btn btn-red" style="font-size:0.72rem;padding:3px 8px;background:#4a1010;" onclick="rejectRouletteSubmission(${s.id})">✕ Reject</button>`
+                : s.status === 'approved'
+                ? `<button class="btn btn-red" style="font-size:0.72rem;padding:3px 8px;" onclick="unapproveRouletteSubmission(${s.id})">↩ Unapprove</button>`
                 : `<span style="color:#445;font-size:0.72rem;">${s.status}</span>`
               }
             </td>
@@ -1349,6 +1351,18 @@ async function approveRouletteSubmission(id) {
   const data = await res.json();
   if (data.ok) { loadRouletteSubmissions(); loadRouletteBanks(); }
   else alert(data.error || 'Approval failed.');
+}
+
+async function unapproveRouletteSubmission(id) {
+  if (!confirm('Unapprove this submission? Points will be reversed and the boss assignment will become active again.')) return;
+  const res = await adminFetch(`/api/admin/roulette/submissions/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'pending' })
+  });
+  const data = await res.json();
+  if (data.ok) { loadRouletteSubmissions(); loadRouletteBanks(); }
+  else alert(data.error || 'Failed.');
 }
 
 async function rejectRouletteSubmission(id) {

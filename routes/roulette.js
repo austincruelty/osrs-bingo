@@ -64,10 +64,12 @@ module.exports = function makeRouletteRouter(broadcast) {
 
         const activeSpins = db.all(`
           SELECT rs.*, rb.boss_name, rb.wheel_tier as boss_tier,
-                 rbd.item_name as bonus_item, rbd.base_points as bonus_base_pts
+                 rbd.item_name as bonus_item, rbd.base_points as bonus_base_pts,
+                 rsub.status as sub_status, rsub.id as sub_id
           FROM roulette_spins rs
           JOIN roulette_bosses rb ON rb.id = rs.boss_id
           LEFT JOIN roulette_boss_drops rbd ON rbd.id = rs.bonus_drop_id
+          LEFT JOIN roulette_submissions rsub ON rsub.spin_id = rs.id AND rsub.status = 'pending'
           WHERE rs.event_id = ? AND rs.team = ? AND rs.status = 'active'
         `, [req.params.id, team.team_number]);
 

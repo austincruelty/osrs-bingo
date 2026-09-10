@@ -368,7 +368,7 @@ module.exports = function makeAdminRouter(broadcast) {
 
   router.patch('/roulette/submissions/:id', (req, res) => {
     const { status } = req.body;
-    if (!['approved', 'rejected'].includes(status)) return res.status(400).json({ error: 'invalid status' });
+    if (!['approved', 'rejected', 'pending'].includes(status)) return res.status(400).json({ error: 'invalid status' });
     const sub = db.get('SELECT * FROM roulette_submissions WHERE id = ?', [req.params.id]);
     if (!sub) return res.status(404).json({ error: 'Not found' });
 
@@ -380,12 +380,19 @@ module.exports = function makeAdminRouter(broadcast) {
       const basePoints = drop?.base_points || 0;
       const bonusPoints = spin && drop && spin.bonus_drop_id === sub.drop_id ? config.bonus_value : 0;
       const total = basePoints + bonusPoints;
-
       db.run('UPDATE roulette_submissions SET status = ?, points_awarded = ?, bonus_points = ? WHERE id = ?',
         [status, basePoints, bonusPoints, sub.id]);
       db.run('UPDATE roulette_spins SET status = ? WHERE id = ?', ['completed', sub.spin_id]);
       db.run('INSERT INTO roulette_bank_log (event_id, team, amount, reason) VALUES (?, ?, ?, ?)',
         [sub.event_id, sub.team, total, `${drop?.item_name || 'Drop'} from boss${bonusPoints ? ` +${bonusPoints} bonus` : ''}`]);
+    } else if (status === 'pending' && sub.status === 'approved') {
+      // Unapprove: reverse the points and restore the spin to active
+      const total = (sub.points_awarded || 0) + (sub.bonus_points || 0);
+      db.run('INSERT INTO roulette_bank_log (event_id, team, amount, reason) VALUES (?, ?, ?, ?)',
+        [sub.event_id, sub.team, -total, 'Submission unapproved']);
+      db.run('UPDATE roulette_spins SET status = ? WHERE id = ?', ['active', sub.spin_id]);
+      db.run('UPDATE roulette_submissions SET status = ?, points_awarded = 0, bonus_points = 0 WHERE id = ?',
+        ['pending', sub.id]);
     } else {
       db.run('UPDATE roulette_submissions SET status = ? WHERE id = ?', [status, sub.id]);
     }
