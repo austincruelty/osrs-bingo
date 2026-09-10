@@ -126,6 +126,12 @@ async function loadEvents() {
   });
 }
 
+function showLanding() {
+  const landing = document.getElementById('landing');
+  landing.style.display = '';
+  requestAnimationFrame(() => landing.classList.remove('hidden'));
+}
+
 function landingSelectEvent(eventId) {
   const landing = document.getElementById('landing');
   landing.classList.add('hidden');
