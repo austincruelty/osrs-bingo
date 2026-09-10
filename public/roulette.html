@@ -119,6 +119,22 @@ canvas { border-radius: 50%; display: block; }
 .submit-status { font-size: 0.82rem; min-height: 1.5em; margin-top: 8px; }
 .submit-status.error { color: #e05050; }
 .submit-status.success { color: #50c878; }
+
+/* Live Drops Feed */
+.live-drops { margin-top: 24px; }
+.live-drops h2 { color: #c89b3c; font-size: 0.95rem; letter-spacing: 0.04em; margin-bottom: 10px; }
+.drops-feed { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; padding-right: 4px; }
+.drops-feed::-webkit-scrollbar { width: 4px; }
+.drops-feed::-webkit-scrollbar-track { background: transparent; }
+.drops-feed::-webkit-scrollbar-thumb { background: #2a3a54; border-radius: 2px; }
+.drop-entry { display: flex; align-items: center; gap: 12px; background: #111827; border: 1px solid #1e2a40; border-radius: 8px; padding: 10px 14px; animation: dropIn 0.3s ease; }
+@keyframes dropIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.drop-sprite { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; flex-shrink: 0; }
+.drop-info { flex: 1; min-width: 0; }
+.drop-item { font-weight: 600; color: #e0d5b7; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.drop-meta { font-size: 0.75rem; color: #556; margin-top: 2px; }
+.drop-pts { font-weight: bold; color: #c89b3c; font-size: 0.9rem; white-space: nowrap; flex-shrink: 0; }
+.no-drops { color: #445; font-size: 0.85rem; text-align: center; padding: 20px 0; }
 </style>
 </head>
 <body>
@@ -196,6 +212,13 @@ canvas { border-radius: 50%; display: block; }
         <div class="assignments">
           <h2>Active Boss Assignments</h2>
           <div class="assignment-grid" id="assignment-grid"></div>
+        </div>
+
+        <div class="live-drops">
+          <h2>📦 Live Drops</h2>
+          <div class="drops-feed" id="drops-feed">
+            <div class="no-drops">No drops yet — be the first!</div>
+          </div>
         </div>
       </div>
 
@@ -390,6 +413,29 @@ function renderState() {
       <td style="color:#c89b3c;">${pts}</td>
     </tr>`;
   }).join('');
+
+  // Live drops feed
+  const approvedDrops = history.filter(h => h.status === 'completed' && h.submitted_item);
+  const feedEl = document.getElementById('drops-feed');
+  if (!approvedDrops.length) {
+    feedEl.innerHTML = '<div class="no-drops">No drops yet — be the first!</div>';
+  } else {
+    feedEl.innerHTML = approvedDrops.slice(0, 30).map(h => {
+      const color = teamColors(h.team);
+      const wikiName = h.submitted_item.replace(/ /g, '_');
+      const spriteUrl = `https://oldschool.runescape.wiki/images/${wikiName}.png`;
+      const pts = (h.points_awarded || 0) + (h.bonus_points || 0);
+      const who = h.player_name ? ` · ${escHtml(h.player_name)}` : '';
+      return `<div class="drop-entry">
+        <img class="drop-sprite" src="${spriteUrl}" alt="" onerror="this.style.display='none'">
+        <div class="drop-info">
+          <div class="drop-item">${escHtml(h.submitted_item)}</div>
+          <div class="drop-meta"><span style="color:${color};font-weight:600;">${escHtml(h.team_name)}</span>${who} · ${escHtml(h.boss_name)} · ${timeAgo(h.created_at)}</div>
+        </div>
+        <div class="drop-pts">+${pts} pts</div>
+      </div>`;
+    }).join('');
+  }
 
   // Sidebars — split teams: odd-numbered teams left, even right (for 2 teams: left=T1, right=T2)
   function rosterCard(team) {
