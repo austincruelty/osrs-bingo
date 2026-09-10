@@ -169,7 +169,15 @@
       </div>
       <button class="btn btn-gold" onclick="submitNewEvent()">Create Event</button>
     </div>
-    <div id="create-status" style="font-size:0.8rem;"></div>
+    <div class="form-row" style="margin-top:4px;">
+      <div style="flex:1;min-width:200px;">
+        <label style="font-size:0.72rem;color:#556;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">Gamemode Template</label>
+        <select id="ev-gamemode" style="width:100%;background:#0a1020;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:8px 10px;font-size:0.85rem;">
+          <option value="">— Blank board (no template) —</option>
+        </select>
+      </div>
+    </div>
+    <div id="create-status" style="font-size:0.8rem;margin-top:8px;"></div>
   </section>
 
   <!-- Events List -->
@@ -219,6 +227,10 @@
   <!-- Board Editor -->
   <section id="board-section" style="display:none">
     <h2>Board Editor — <span id="board-event-name"></span></h2>
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+      <button class="btn btn-blue" onclick="saveAsGamemode()" style="font-size:0.8rem;">💾 Save Board as Gamemode</button>
+      <span id="gamemode-save-status" style="font-size:0.8rem;color:#50c878;"></span>
+    </div>
     <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
       <label style="font-size:0.85rem;color:#556;">Grid:</label>
       <select id="grid-rows" onchange="initGrid()">
@@ -415,6 +427,7 @@ async function submitNewEvent() {
   const teamInputs = Array.from(document.querySelectorAll('#create-teams-list .create-team-input'));
   const team1_name = (teamInputs[0]?.value || '').trim() || 'Team 1';
   const team2_name = (teamInputs[1]?.value || '').trim() || 'Team 2';
+  const gamemode_id = document.getElementById('ev-gamemode').value || null;
   const statusEl = document.getElementById('create-status');
   if (!name || !code_word) {
     statusEl.style.color = '#e05050'; statusEl.textContent = 'Event name and code word are required.'; return;
@@ -424,7 +437,7 @@ async function submitNewEvent() {
     const res = await adminFetch('/api/admin/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, code_word, team1_name, team2_name })
+      body: JSON.stringify({ name, code_word, team1_name, team2_name, gamemode_id })
     });
     const data = await res.json();
     if (data.id) {
@@ -1049,7 +1062,47 @@ function bossSpriteDragStart(event, bossName) {
   event.dataTransfer.effectAllowed = 'copy';
 }
 
-checkAuth().then(ok => { if (ok) loadEvents(); });
+// ── Gamemodes ────────────────────────────────────────────
+
+async function loadGamemodes() {
+  try {
+    const res = await adminFetch('/api/admin/gamemodes');
+    const gamemodes = await res.json();
+    const sel = document.getElementById('ev-gamemode');
+    sel.innerHTML = '<option value="">— Blank board (no template) —</option>' +
+      gamemodes.map(g => `<option value="${g.id}">${escHtml(g.name)}</option>`).join('');
+  } catch {}
+}
+
+async function saveAsGamemode() {
+  const name = prompt('Name this gamemode template:', selectedEventData?.name || '');
+  if (!name || !name.trim()) return;
+  const statusEl = document.getElementById('gamemode-save-status');
+  statusEl.textContent = 'Saving...';
+  try {
+    const res = await adminFetch(`/api/admin/events/${selectedEventId}/save-as-gamemode`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name.trim() })
+    });
+    const data = await res.json();
+    if (data.id) {
+      statusEl.textContent = `✓ Saved as "${data.name}"`;
+      loadGamemodes();
+      setTimeout(() => { statusEl.textContent = ''; }, 3000);
+    } else {
+      statusEl.style.color = '#e05050';
+      statusEl.textContent = data.error || 'Save failed.';
+      setTimeout(() => { statusEl.textContent = ''; statusEl.style.color = '#50c878'; }, 3000);
+    }
+  } catch {
+    statusEl.style.color = '#e05050';
+    statusEl.textContent = 'Network error.';
+    setTimeout(() => { statusEl.textContent = ''; statusEl.style.color = '#50c878'; }, 3000);
+  }
+}
+
+checkAuth().then(ok => { if (ok) { loadEvents(); loadGamemodes(); } });
 </script>
 </body>
 </html>

@@ -152,6 +152,38 @@ async function init() {
     UNIQUE(event_id, team_number)
   )`);
 
+  // ── Gamemode templates ──────────────────────────────────────
+  _db.run(`CREATE TABLE IF NOT EXISTS gamemodes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+
+  _db.run(`CREATE TABLE IF NOT EXISTS gamemode_tiles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gamemode_id INTEGER NOT NULL REFERENCES gamemodes(id),
+    row INTEGER NOT NULL,
+    col INTEGER NOT NULL,
+    tile_name TEXT NOT NULL
+  )`);
+
+  _db.run(`CREATE TABLE IF NOT EXISTS gamemode_tile_item_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tile_id INTEGER NOT NULL REFERENCES gamemode_tiles(id),
+    group_name TEXT NOT NULL,
+    target_count INTEGER NOT NULL DEFAULT 1,
+    display_order INTEGER NOT NULL DEFAULT 0
+  )`);
+
+  _db.run(`CREATE TABLE IF NOT EXISTS gamemode_tile_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tile_id INTEGER NOT NULL REFERENCES gamemode_tiles(id),
+    item_name TEXT NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    wiki_image TEXT,
+    group_id INTEGER
+  )`);
+
   // Seed event_teams from existing team1_name/team2_name columns (idempotent — UNIQUE constraint skips duplicates)
   try {
     const rows = db.all('SELECT id, team1_name, team2_name FROM events');

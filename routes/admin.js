@@ -13,6 +13,54 @@ module.exports = function makeAdminRouter(broadcast) {
     next();
   });
 
+  // ── Gamemodes ────────────────────────────────────────────
+  router.get('/gamemodes', (req, res) => {
+    res.json(db.all('SELECT * FROM gamemodes ORDER BY created_at DESC'));
+  });
+
+  router.post('/events/:id/save-as-gamemode', (req, res) => {
+    const { name } = req.body;
+    if (!name || !name.trim()) return res.status(400).json({ error: 'name required' });
+    const tiles = db.all('SELECT * FROM tiles WHERE event_id = ? ORDER BY row, col', [req.params.id]);
+    if (!tiles.length) return res.status(400).json({ error: 'No tiles on this board to save' });
+    const save = db.transaction(() => {
+      const r = db.run('INSERT INTO gamemodes (name) VALUES (?)', [name.trim()]);
+      const gamemodeId = r.lastInsertRowid;
+      for (const tile of tiles) {
+        const tr = db.run(
+          'INSERT INTO gamemode_tiles (gamemode_id, row, col, tile_name) VALUES (?, ?, ?, ?)',
+          [gamemodeId, tile.row, tile.col, tile.tile_name]
+        );
+        const gtId = tr.lastInsertRowid;
+        const groups = db.all('SELECT * FROM tile_item_groups WHERE tile_id = ? ORDER BY display_order', [tile.id]);
+        const groupIdMap = {};
+        for (const g of groups) {
+          const gr = db.run(
+            'INSERT INTO gamemode_tile_item_groups (tile_id, group_name, target_count, display_order) VALUES (?, ?, ?, ?)',
+            [gtId, g.group_name, g.target_count, g.display_order]
+          );
+          groupIdMap[g.id] = gr.lastInsertRowid;
+        }
+        const items = db.all('SELECT * FROM tile_items WHERE tile_id = ?', [tile.id]);
+        for (const item of items) {
+          const newGroupId = item.group_id ? (groupIdMap[item.group_id] || null) : null;
+          db.run(
+            'INSERT INTO gamemode_tile_items (tile_id, item_name, quantity, wiki_image, group_id) VALUES (?, ?, ?, ?, ?)',
+            [gtId, item.item_name, item.quantity, item.wiki_image, newGroupId]
+          );
+        }
+      }
+      return gamemodeId;
+    });
+    try {
+      const id = save();
+      res.json({ id, name: name.trim() });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── Events ──────────────────────────────────────────────
   router.get('/events', (req, res) => {
     const events = db.all('SELECT * FROM events ORDER BY created_at DESC');
     res.json(events.map(ev => ({
@@ -22,7 +70,7 @@ module.exports = function makeAdminRouter(broadcast) {
   });
 
   router.post('/events', (req, res) => {
-    const { name, code_word, team1_name, team2_name } = req.body;
+    const { name, code_word, team1_name, team2_name, gamemode_id } = req.body;
     if (!name || !code_word) return res.status(400).json({ error: 'name and code_word required' });
     const result = db.run(
       'INSERT INTO events (name, code_word, team1_name, team2_name) VALUES (?, ?, ?, ?)',
@@ -31,6 +79,35 @@ module.exports = function makeAdminRouter(broadcast) {
     const eventId = result.lastInsertRowid;
     db.run('INSERT INTO event_teams (event_id, team_number, team_name) VALUES (?, 1, ?)', [eventId, team1_name || 'Team 1']);
     db.run('INSERT INTO event_teams (event_id, team_number, team_name) VALUES (?, 2, ?)', [eventId, team2_name || 'Team 2']);
+
+    if (gamemode_id) {
+      const gmTiles = db.all('SELECT * FROM gamemode_tiles WHERE gamemode_id = ? ORDER BY row, col', [gamemode_id]);
+      for (const gmt of gmTiles) {
+        const tr = db.run(
+          'INSERT INTO tiles (event_id, row, col, tile_name) VALUES (?, ?, ?, ?)',
+          [eventId, gmt.row, gmt.col, gmt.tile_name]
+        );
+        const tileId = tr.lastInsertRowid;
+        const groups = db.all('SELECT * FROM gamemode_tile_item_groups WHERE tile_id = ? ORDER BY display_order', [gmt.id]);
+        const groupIdMap = {};
+        for (const g of groups) {
+          const gr = db.run(
+            'INSERT INTO tile_item_groups (tile_id, group_name, target_count, display_order) VALUES (?, ?, ?, ?)',
+            [tileId, g.group_name, g.target_count, g.display_order]
+          );
+          groupIdMap[g.id] = gr.lastInsertRowid;
+        }
+        const items = db.all('SELECT * FROM gamemode_tile_items WHERE tile_id = ?', [gmt.id]);
+        for (const item of items) {
+          const newGroupId = item.group_id ? (groupIdMap[item.group_id] || null) : null;
+          db.run(
+            'INSERT INTO tile_items (tile_id, item_name, quantity, wiki_image, group_id) VALUES (?, ?, ?, ?, ?)',
+            [tileId, item.item_name, item.quantity, item.wiki_image, newGroupId]
+          );
+        }
+      }
+    }
+
     res.json({ id: eventId });
   });
 
