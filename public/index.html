@@ -115,10 +115,14 @@
 
     .admin-link {
       color: #4a7fc1;
-      font-size: 0.75rem;
+      font-size: 0.85rem;
       text-decoration: none;
       opacity: 0.7;
       transition: opacity 0.2s;
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
     }
     .admin-link:hover { opacity: 1; }
 
@@ -560,7 +564,7 @@
   <div class="header-controls">
     <select id="event-select"><option value="">Select Event...</option></select>
     <button id="submit-btn" onclick="openSubmitModal()">Submit Drop</button>
-    <button class="admin-link" onclick="showLanding()" style="cursor:pointer;">🏠 Home</button>
+    <a href="#" class="admin-link" onclick="showLanding(); return false;">🏠 Home</a>
     <a href="/admin.html" class="admin-link">Admin</a>
   </div>
 </header>

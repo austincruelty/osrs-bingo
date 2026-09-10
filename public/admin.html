@@ -10,6 +10,8 @@
     body::before { content: ''; position: fixed; inset: 0; background: url('/osrs-map.png') center center / cover no-repeat; filter: blur(3px) brightness(0.35); opacity: 0.28; z-index: -1; transform: scale(1.04); pointer-events: none; }
     header { background: #111827; border-bottom: 2px solid #c89b3c; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
     header h1 { color: #c89b3c; font-size: 1.2rem; }
+    .admin-link { color: #4a7fc1; font-size: 0.85rem; text-decoration: none; opacity: 0.7; transition: opacity 0.2s; background: none; border: none; padding: 0; cursor: pointer; }
+    .admin-link:hover { opacity: 1; }
     a { color: #4a7fc1; font-size: 0.85rem; text-decoration: none; }
     .container { max-width: 1000px; margin: 24px auto; padding: 0 16px; }
     section { background: #111827; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #1e2a40; }
@@ -146,8 +148,8 @@
 <header>
   <h1>⚙️ Veritas Bingo — Admin</h1>
   <div style="display:flex;gap:16px;align-items:center;">
-    <a href="/" style="color:#4a7fc1;font-size:0.85rem;text-decoration:none;">🏠 Home</a>
-    <a id="back-to-board" href="/" style="color:#c89b3c;font-size:0.85rem;text-decoration:none;display:none;">← Back to Board</a>
+    <a href="/" class="admin-link">🏠 Home</a>
+    <a id="back-to-board" href="/" class="admin-link" style="color:#c89b3c;display:none;">← Back to Board</a>
   </div>
 </header>
 
