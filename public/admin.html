@@ -117,6 +117,29 @@
     .boss-sprite span { font-size:0.55rem; color:#9ab8d8; text-align:center; line-height:1.3; word-break:break-word; }
     .grid-cell.drag-over { border-color:#c89b3c !important; background:#1a2a10 !important; transform:scale(1.03); }
 
+    /* Boss Manager */
+    .boss-cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media(max-width:700px) { .boss-cols { grid-template-columns:1fr; } }
+    .boss-col-title { color:#9ab8d8; font-size:0.8rem; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #1e2a40; }
+    .boss-card { background:#0a0f1e; border:1px solid #1e2a40; border-radius:6px; margin-bottom:6px; overflow:hidden; }
+    .boss-hdr { display:flex; align-items:center; gap:6px; padding:8px 10px; cursor:pointer; transition:background 0.15s; }
+    .boss-hdr:hover { background:#111827; }
+    .boss-toggle { color:#c89b3c; font-size:0.7rem; width:12px; flex-shrink:0; }
+    .boss-name-inp { background:transparent; border:none; color:#e0d5b7; font-weight:600; font-size:0.85rem; flex:1; min-width:0; cursor:pointer; }
+    .boss-name-inp:focus { background:#0f1e3a; border-radius:3px; padding:2px 6px; outline:1px solid #4a7fc1; cursor:text; }
+    .boss-tier-sel { background:#0f1e3a; color:#9ab8d8; border:1px solid #2a3a54; border-radius:4px; font-size:0.72rem; padding:3px 6px; }
+    .boss-save-btn { font-size:0.72rem; padding:3px 8px; }
+    .boss-del-btn { font-size:0.72rem; padding:3px 8px; }
+    .boss-drops-body { padding:8px 10px 10px; border-top:1px solid #1e2a40; display:none; }
+    .boss-drops-body.open { display:block; }
+    .drop-row { display:flex; gap:5px; align-items:center; margin-bottom:5px; }
+    .drop-name-inp { flex:1; min-width:0; font-size:0.82rem; padding:5px 8px; }
+    .drop-pts-inp { width:64px; flex-shrink:0; font-size:0.82rem; padding:5px 8px; text-align:center; }
+    .drop-action-btn { font-size:0.72rem; padding:4px 8px; flex-shrink:0; }
+    .add-drop-row { display:flex; gap:5px; margin-top:8px; padding-top:8px; border-top:1px solid #1e2a4055; }
+    .add-drop-row input { font-size:0.82rem; }
+    .no-drops-msg { color:#445; font-size:0.8rem; margin-bottom:8px; }
+
     /* Item pool editor */
     .pool-row { background:#080d1a; border:1px solid #1e2a40; border-radius:5px; padding:10px; margin-bottom:8px; }
     .pool-header { display:flex; gap:6px; align-items:center; margin-bottom:8px; }
@@ -331,6 +354,34 @@
   <section id="roulette-submissions-section" style="display:none">
     <h2>🎰 Drop Submissions</h2>
     <div id="roulette-submissions-content">Loading...</div>
+  </section>
+
+  <!-- Boss Manager (always visible) -->
+  <section id="boss-manager-section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h2 style="margin:0;">⚙️ Boss Manager</h2>
+      <button class="btn btn-gold" onclick="toggleAddBossForm()">+ Add Boss</button>
+    </div>
+    <div id="add-boss-form" style="display:none;" class="form-row" style="margin-bottom:12px;">
+      <input type="text" id="new-boss-name" placeholder="Boss name" style="flex:1;">
+      <select id="new-boss-tier">
+        <option value="1">Wheel 1 — High Tier</option>
+        <option value="2">Wheel 2 — Mid Tier</option>
+      </select>
+      <button class="btn btn-green" onclick="addBoss()">Add</button>
+      <button class="btn btn-gray" onclick="toggleAddBossForm()">Cancel</button>
+      <span id="add-boss-status" style="font-size:0.8rem;align-self:center;"></span>
+    </div>
+    <div class="boss-cols">
+      <div>
+        <div class="boss-col-title">🏆 Wheel 1 — High Tier</div>
+        <div id="boss-list-1"></div>
+      </div>
+      <div>
+        <div class="boss-col-title">⚔️ Wheel 2 — Mid Tier</div>
+        <div id="boss-list-2"></div>
+      </div>
+    </div>
   </section>
 
 </div>
@@ -1379,7 +1430,144 @@ async function rejectRouletteSubmission(id) {
   else alert(data.error || 'Reject failed.');
 }
 
-checkAuth().then(ok => { if (ok) { loadEvents(); loadGamemodes(); } });
+checkAuth().then(ok => { if (ok) { loadEvents(); loadGamemodes(); loadBossManager(); } });
+
+// ── Boss Manager ─────────────────────────────────────────────
+let _openBossId = null;
+
+async function loadBossManager() {
+  try {
+    const res = await adminFetch('/api/admin/roulette/bosses');
+    const bosses = await res.json();
+    renderBossManager(bosses);
+  } catch {}
+}
+
+function renderBossManager(bosses) {
+  const t1 = bosses.filter(b => b.wheel_tier === 1);
+  const t2 = bosses.filter(b => b.wheel_tier === 2);
+  document.getElementById('boss-list-1').innerHTML = t1.map(bossCard).join('') || '<div style="color:#445;font-size:0.82rem;">No bosses.</div>';
+  document.getElementById('boss-list-2').innerHTML = t2.map(bossCard).join('') || '<div style="color:#445;font-size:0.82rem;">No bosses.</div>';
+}
+
+function bossCard(b) {
+  const isOpen = _openBossId === b.id;
+  const dropsHtml = b.drops.map(d => `
+    <div class="drop-row" id="drop-row-${d.id}">
+      <input class="drop-name-inp" type="text" value="${escHtml(d.item_name)}" id="drop-name-${d.id}">
+      <input class="drop-pts-inp" type="number" value="${d.base_points}" id="drop-pts-${d.id}" min="0">
+      <button class="btn btn-blue drop-action-btn" onclick="saveDrop(${d.id})">Save</button>
+      <button class="btn btn-red drop-action-btn" onclick="deleteDrop(${d.id}, ${b.id})">✕</button>
+    </div>`).join('');
+
+  return `<div class="boss-card" id="boss-card-${b.id}">
+    <div class="boss-hdr" onclick="toggleBossDrops(${b.id})">
+      <span class="boss-toggle">${isOpen ? '▼' : '▶'}</span>
+      <input class="boss-name-inp" type="text" value="${escHtml(b.boss_name)}" id="boss-name-${b.id}" onclick="event.stopPropagation()">
+      <select class="boss-tier-sel" id="boss-tier-${b.id}" onclick="event.stopPropagation()">
+        <option value="1"${b.wheel_tier===1?' selected':''}>Wheel 1</option>
+        <option value="2"${b.wheel_tier===2?' selected':''}>Wheel 2</option>
+      </select>
+      <button class="btn btn-blue boss-save-btn" onclick="event.stopPropagation();saveBoss(${b.id})">Save</button>
+      <button class="btn btn-red boss-del-btn" onclick="event.stopPropagation();deleteBoss(${b.id},'${escHtml(b.boss_name)}')">✕</button>
+    </div>
+    <div class="boss-drops-body${isOpen?' open':''}" id="boss-drops-${b.id}">
+      ${b.drops.length ? dropsHtml : '<div class="no-drops-msg">No drops yet.</div>'}
+      <div class="add-drop-row">
+        <input type="text" placeholder="Item name" id="new-drop-name-${b.id}" style="flex:1;">
+        <input type="number" placeholder="Pts" id="new-drop-pts-${b.id}" style="width:64px;" min="0" value="0">
+        <button class="btn btn-green drop-action-btn" onclick="addDrop(${b.id})">+ Drop</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleBossDrops(id) {
+  _openBossId = (_openBossId === id) ? null : id;
+  loadBossManager();
+}
+
+function toggleAddBossForm() {
+  const f = document.getElementById('add-boss-form');
+  f.style.display = f.style.display === 'none' ? 'flex' : 'none';
+}
+
+async function saveBoss(id) {
+  const name = document.getElementById(`boss-name-${id}`).value.trim();
+  const tier = parseInt(document.getElementById(`boss-tier-${id}`).value);
+  if (!name) return;
+  const res = await adminFetch(`/api/admin/roulette/bosses/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ boss_name: name, wheel_tier: tier })
+  });
+  const data = await res.json();
+  if (data.ok) loadBossManager();
+  else alert(data.error || 'Save failed.');
+}
+
+async function deleteBoss(id, name) {
+  if (!confirm(`Delete "${name}" and all its drops?`)) return;
+  const res = await adminFetch(`/api/admin/roulette/bosses/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.ok) { if (_openBossId === id) _openBossId = null; loadBossManager(); }
+  else alert(data.error || 'Delete failed.');
+}
+
+async function addBoss() {
+  const name = document.getElementById('new-boss-name').value.trim();
+  const tier = document.getElementById('new-boss-tier').value;
+  const statusEl = document.getElementById('add-boss-status');
+  if (!name) { statusEl.style.color='#e05050'; statusEl.textContent='Name required.'; return; }
+  const res = await adminFetch('/api/admin/roulette/bosses', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ boss_name: name, wheel_tier: parseInt(tier) })
+  });
+  const data = await res.json();
+  if (data.ok) {
+    document.getElementById('new-boss-name').value = '';
+    statusEl.style.color='#50c878'; statusEl.textContent='Added!';
+    setTimeout(() => { statusEl.textContent=''; }, 2000);
+    loadBossManager();
+  } else {
+    statusEl.style.color='#e05050'; statusEl.textContent=data.error || 'Failed.';
+  }
+}
+
+async function saveDrop(id) {
+  const name = document.getElementById(`drop-name-${id}`).value.trim();
+  const pts = parseInt(document.getElementById(`drop-pts-${id}`).value) || 0;
+  if (!name) return;
+  const res = await adminFetch(`/api/admin/roulette/boss-drops/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ item_name: name, base_points: pts })
+  });
+  const data = await res.json();
+  if (!data.ok) alert(data.error || 'Save failed.');
+}
+
+async function deleteDrop(id, bossId) {
+  const res = await adminFetch(`/api/admin/roulette/boss-drops/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.ok) loadBossManager();
+  else alert(data.error || 'Delete failed.');
+}
+
+async function addDrop(bossId) {
+  const name = document.getElementById(`new-drop-name-${bossId}`).value.trim();
+  const pts = parseInt(document.getElementById(`new-drop-pts-${bossId}`).value) || 0;
+  if (!name) return;
+  const res = await adminFetch('/api/admin/roulette/boss-drops', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ boss_id: bossId, item_name: name, base_points: pts })
+  });
+  const data = await res.json();
+  if (data.ok) loadBossManager();
+  else alert(data.error || 'Failed.');
+}
 </script>
 </body>
 </html>
