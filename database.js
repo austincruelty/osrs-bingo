@@ -258,6 +258,67 @@ async function init() {
   try { db.run("UPDATE roulette_bosses SET wheel_tier = 1 WHERE boss_name = 'Gauntlet'"); } catch {}
   try { db.run("ALTER TABLE roulette_boss_drops ADD COLUMN image_url TEXT"); } catch {}
 
+  // Populate known image_url overrides — items whose DB name differs from the wiki file name.
+  // Runs every startup (idempotent UPDATE). Add entries here instead of editing them in Boss Manager.
+  const W = 'https://oldschool.runescape.wiki/w/Special:FilePath/';
+  const BOSS_DROP_URL_OVERRIDES = [
+    // Chambers of Xeric
+    { boss:'Chambers of Xeric',  item:'Twisted Kit',                file:'Twisted_ancestral_colour_kit.png' },
+    { boss:'Chambers of Xeric',  item:'Dust',                       file:'Metamorphic_dust.png' },
+    { boss:'Chambers of Xeric',  item:'Pet',                        file:'Olmlet.png' },
+    // Theatre of Blood
+    { boss:'Theatre of Blood',   item:'Dust',                       file:'Sanguine_dust.png' },
+    { boss:'Theatre of Blood',   item:'Pet',                        file:"Lil'_zik.png" },
+    // Tombs of Amascut
+    { boss:'Tombs of Amascut',   item:'Pet',                        file:"Tumeken's_warden.png" },
+    // Desert Treasure II
+    { boss:'Duke Sucellus',      item:'Pet',                        file:'Duke_(pet).png' },
+    { boss:'The Leviathan',      item:'Pet',                        file:"Lil'_leviathan.png" },
+    { boss:'Vardorvis',          item:'Pet',                        file:'Butch.png' },
+    { boss:'The Whisperer',      item:'Pet',                        file:'Wisp.png' },
+    // Nex
+    { boss:'Nex',                item:'Pet',                        file:'Nexling.png' },
+    // The Nightmare
+    { boss:'The Nightmare',      item:'Jar',                        file:'Jar_of_dreams.png' },
+    { boss:'The Nightmare',      item:'Pet',                        file:'Little_nightmare.png' },
+    // Corporeal Beast
+    { boss:'Corporeal Beast',    item:'Jar',                        file:'Jar_of_spirits.png' },
+    { boss:'Corporeal Beast',    item:'Pet',                        file:'Corporeal_critter.png' },
+    // Gauntlet
+    { boss:'Gauntlet',           item:'Pet',                        file:'Youngllef.png' },
+    // Wilderness bosses
+    { boss:'Artio/Callisto',     item:'Pet',                        file:'Callisto_cub.png' },
+    { boss:"Calvar'ion/Vet'ion", item:'Pet',                        file:"Vet'ion_jr..png" },
+    { boss:'Spindel/Venenatis',  item:'Pet',                        file:'Venenatis_spiderling.png' },
+    // GWD
+    { boss:'Armadyl',            item:'Pet',                        file:"Kree'arra.png" },
+    { boss:'Zamorak',            item:'Pet',                        file:"K'ril_Jr..png" },
+    { boss:'Saradomin',          item:'Pet',                        file:'Commander_zilyana_jr..png' },
+    { boss:'Bandos',             item:'Pet',                        file:'General_graardor_jr..png' },
+    // Dagannoth Kings (3 pets — Rex shown as representative)
+    { boss:'Dagannoth Kings',    item:'Pet',                        file:'Dagannoth_rex_jr..png' },
+    // Other
+    { boss:'Vorkath',            item:'Pet',                        file:'Vorki.png' },
+    { boss:'Zulrah',             item:'Pet',                        file:'Snakeling.png' },
+    { boss:'Sarachnis',          item:'Pet',                        file:'Sraracha.png' },
+    { boss:'Hueycoatl',          item:'Pet',                        file:'Baby_hueycoatl.png' },
+    { boss:'Kalphite Queen',     item:'KQ Head',                    file:"Kalphite_queen's_head.png" },
+    { boss:'Kalphite Queen',     item:'Pet',                        file:'Kalphite_princess.png' },
+    { boss:'Amoxliatl',          item:'Pet',                        file:'Baby_amoxliatl.png' },
+    { boss:'King Black Dragon',  item:'KBD Heads',                  file:'King_black_dragon_heads.png' },
+    { boss:'King Black Dragon',  item:'Pet',                        file:'Prince_black_dragon.png' },
+  ];
+  for (const o of BOSS_DROP_URL_OVERRIDES) {
+    try {
+      db.run(
+        `UPDATE roulette_boss_drops SET image_url = ?
+         WHERE item_name = ? AND image_url IS NULL
+           AND boss_id = (SELECT id FROM roulette_bosses WHERE boss_name = ?)`,
+        [W + o.file, o.item, o.boss]
+      );
+    } catch {}
+  }
+
   // Seed boss/drop data (runs once)
   const bossCount = db.get('SELECT COUNT(*) as c FROM roulette_bosses');
   if (!bossCount || bossCount.c === 0) {
