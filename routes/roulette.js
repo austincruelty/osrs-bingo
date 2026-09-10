@@ -96,7 +96,8 @@ module.exports = function makeRouletteRouter(broadcast) {
         LIMIT 60
       `, [req.params.id]);
 
-      res.json({ event, config, teams: teamData, history });
+      const members = db.all('SELECT team, player_name FROM team_members WHERE event_id = ? ORDER BY team, player_name', [req.params.id]);
+      res.json({ event, config, teams: teamData, history, members });
     } catch (err) { next(err); }
   });
 

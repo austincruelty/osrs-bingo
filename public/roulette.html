@@ -24,16 +24,35 @@ header a { color: #4a7fc1; font-size: 0.85rem; text-decoration: none; }
 .landing-ev-name { font-weight: bold; display: block; }
 .landing-ev-meta { font-size: 0.75rem; color: #556; margin-top: 3px; }
 
-.container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+.container { max-width: 1400px; margin: 0 auto; padding: 16px; }
 .hidden { display: none !important; }
 
+/* Page layout: sidebars + center */
+.page-layout { display: grid; grid-template-columns: 180px 1fr 180px; gap: 14px; align-items: start; }
+@media (max-width: 900px) { .page-layout { grid-template-columns: 1fr; } .sidebar { display: flex; flex-wrap: wrap; gap: 10px; } }
+
+/* Sidebars */
+.sidebar { display: flex; flex-direction: column; gap: 10px; }
+.roster-card { background: #111827; border: 1px solid #1e2a40; border-radius: 8px; padding: 12px; }
+.roster-card h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid #1e2a40; }
+.roster-member { font-size: 0.8rem; padding: 3px 0; color: #c8bfa8; border-bottom: 1px solid #141c2e; }
+.roster-member:last-child { border-bottom: none; }
+.roster-empty { font-size: 0.75rem; color: #445; }
+
 /* Banks */
-.banks-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
-.bank-card { flex: 1; min-width: 160px; background: #111827; border: 1px solid #1e2a40; border-radius: 8px; padding: 14px 18px; }
+.banks-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.bank-card { flex: 1; min-width: 140px; background: #111827; border: 1px solid #1e2a40; border-radius: 8px; padding: 14px 18px; }
 .bank-name { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
 .bank-amount { font-size: 2rem; font-weight: bold; color: #c89b3c; line-height: 1; }
 .bank-pts { font-size: 0.75rem; color: #556; }
 .bank-completed { font-size: 0.72rem; color: #4a7fc1; margin-top: 4px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 2px; margin-bottom: 16px; }
+.tab-btn { background: #0a0f1e; border: 1px solid #1e2a40; border-radius: 5px 5px 0 0; padding: 7px 18px; font-size: 0.82rem; cursor: pointer; color: #7a9ab8; border-bottom: none; }
+.tab-btn.active { background: #111827; color: #c89b3c; border-color: #2a3a54; border-bottom: 2px solid #111827; margin-bottom: -1px; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 
 /* Wheels section */
 .wheels-section { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 24px; justify-content: center; }
@@ -121,54 +140,88 @@ canvas { border-radius: 50%; display: block; }
 
 <div id="main-view" class="container hidden">
 
+  <!-- Banks always full width -->
   <div class="banks-row" id="banks-row"></div>
 
-  <div class="wheels-section">
-    <div class="wheel-panel">
-      <div class="wheel-title">Wheel 1 — High Tier <span>Raids · DT2 · Nex · Endgame</span></div>
-      <div class="wheel-wrap">
-        <div class="wheel-pointer"></div>
-        <canvas id="wheel1" width="300" height="300"></canvas>
+  <!-- Sidebar layout -->
+  <div class="page-layout">
+
+    <!-- Left sidebar: Team 1 roster -->
+    <div class="sidebar" id="sidebar-left"></div>
+
+    <!-- Center content -->
+    <div>
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('wheels')">🎰 Wheels</button>
+        <button class="tab-btn" onclick="switchTab('history')">📜 History</button>
+        <button class="tab-btn" onclick="switchTab('rules')">📋 Rules</button>
       </div>
-      <div class="spin-controls">
-        <div class="spin-team-row">
-          <select id="spin1-team"><option value="">Select team...</option></select>
+
+      <!-- Wheels tab -->
+      <div class="tab-content active" id="tab-wheels">
+        <div class="wheels-section">
+          <div class="wheel-panel">
+            <div class="wheel-title">Wheel 1 — High Tier <span>Raids · DT2 · Nex · Endgame</span></div>
+            <div class="wheel-wrap">
+              <div class="wheel-pointer"></div>
+              <canvas id="wheel1" width="280" height="280"></canvas>
+            </div>
+            <div class="spin-controls">
+              <div class="spin-team-row">
+                <select id="spin1-team"><option value="">Select team...</option></select>
+              </div>
+              <button class="btn btn-spin" id="btn-spin1" onclick="doSpin(1)">🎲 Spin Wheel 1</button>
+              <div class="spin-result" id="spin1-result">Select your team and spin!</div>
+            </div>
+          </div>
+
+          <div class="wheel-panel">
+            <div class="wheel-title">Wheel 2 — Mid Tier <span>GWD · Wildy · Instanced</span></div>
+            <div class="wheel-wrap">
+              <div class="wheel-pointer"></div>
+              <canvas id="wheel2" width="280" height="280"></canvas>
+            </div>
+            <div class="spin-controls">
+              <div class="spin-team-row">
+                <select id="spin2-team"><option value="">Select team...</option></select>
+              </div>
+              <button class="btn btn-spin" id="btn-spin2" onclick="doSpin(2)">🎲 Spin Wheel 2</button>
+              <div class="spin-result" id="spin2-result">Select your team and spin!</div>
+            </div>
+          </div>
         </div>
-        <button class="btn btn-spin" id="btn-spin1" onclick="doSpin(1)">🎲 Spin Wheel 1</button>
-        <div class="spin-result" id="spin1-result">Select your team and spin!</div>
-      </div>
-    </div>
 
-    <div class="wheel-panel">
-      <div class="wheel-title">Wheel 2 — Mid Tier <span>GWD · Wildy · Instanced</span></div>
-      <div class="wheel-wrap">
-        <div class="wheel-pointer"></div>
-        <canvas id="wheel2" width="300" height="300"></canvas>
-      </div>
-      <div class="spin-controls">
-        <div class="spin-team-row">
-          <select id="spin2-team"><option value="">Select team...</option></select>
+        <div class="assignments">
+          <h2>Active Boss Assignments</h2>
+          <div class="assignment-grid" id="assignment-grid"></div>
         </div>
-        <button class="btn btn-spin" id="btn-spin2" onclick="doSpin(2)">🎲 Spin Wheel 2</button>
-        <div class="spin-result" id="spin2-result">Select your team and spin!</div>
+      </div>
+
+      <!-- History tab -->
+      <div class="tab-content" id="tab-history">
+        <div class="history">
+          <div style="overflow-x:auto;">
+            <table class="history-table">
+              <thead><tr><th>Time</th><th>Team</th><th>Wheel</th><th>Boss</th><th>Bonus Drop</th><th>Status</th><th>Points</th></tr></thead>
+              <tbody id="history-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rules tab -->
+      <div class="tab-content" id="tab-rules">
+        <div class="history" style="white-space:pre-wrap;line-height:1.7;font-size:0.9rem;" id="rules-content">
+          <p style="color:#445;">No rules set for this event.</p>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="assignments">
-    <h2>Active Boss Assignments</h2>
-    <div class="assignment-grid" id="assignment-grid"></div>
-  </div>
+    <!-- Right sidebar: Team 2+ rosters -->
+    <div class="sidebar" id="sidebar-right"></div>
 
-  <div class="history">
-    <h2>Spin History</h2>
-    <div style="overflow-x:auto;">
-      <table class="history-table">
-        <thead><tr><th>Time</th><th>Team</th><th>Wheel</th><th>Boss</th><th>Bonus Drop</th><th>Status</th><th>Points</th></tr></thead>
-        <tbody id="history-body"></tbody>
-      </table>
-    </div>
-  </div>
+  </div><!-- end page-layout -->
 
 </div>
 
@@ -261,8 +314,17 @@ socket.on('board-update', ({ eventId }) => {
   if (String(eventId) === String(currentEventId)) loadState();
 });
 
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    const names = ['wheels','history','rules'];
+    b.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
 function renderState() {
-  const { teams, history, config } = currentState;
+  const { teams, history, config, members, event } = currentState;
 
   // Team selectors
   const teamOpts = '<option value="">Select team...</option>' +
@@ -325,6 +387,31 @@ function renderState() {
       <td style="color:#c89b3c;">${pts}</td>
     </tr>`;
   }).join('');
+
+  // Sidebars — split teams: odd-numbered teams left, even right (for 2 teams: left=T1, right=T2)
+  function rosterCard(team) {
+    const color = teamColors(team.team_number);
+    const teamMembers = (members || []).filter(m => m.team === team.team_number);
+    const rows = teamMembers.length
+      ? teamMembers.map(m => `<div class="roster-member">${escHtml(m.player_name)}</div>`).join('')
+      : '<div class="roster-empty">No players added</div>';
+    return `<div class="roster-card" style="border-top:2px solid ${color};">
+      <h3 style="color:${color};">${escHtml(team.team_name)}</h3>
+      ${rows}
+    </div>`;
+  }
+  const leftTeams = teams.filter(t => t.team_number % 2 === 1);
+  const rightTeams = teams.filter(t => t.team_number % 2 === 0);
+  document.getElementById('sidebar-left').innerHTML = leftTeams.map(rosterCard).join('');
+  document.getElementById('sidebar-right').innerHTML = rightTeams.map(rosterCard).join('');
+
+  // Rules
+  const rulesEl = document.getElementById('rules-content');
+  if (event?.rules && event.rules.trim()) {
+    rulesEl.innerHTML = escHtml(event.rules).replace(/\n/g, '<br>');
+  } else {
+    rulesEl.innerHTML = '<p style="color:#445;">No rules set for this event.</p>';
+  }
 }
 
 // ── Wheel drawing ─────────────────────────────────────────────
