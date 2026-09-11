@@ -930,6 +930,7 @@ function addItemRow(value = '', qty = 1, wikiImage = '', itemId = null) {
   const updateSprite = () => {
     clearTimeout(debounce);
     debounce = setTimeout(() => {
+      autoFillWiki(nameInput, wikiInput);
       const name = nameInput.value.trim();
       const wiki = wikiInput.value.trim();
       if (name || wiki) { img.src = itemSpriteUrl(name, wiki); img.style.display = ''; }
@@ -983,6 +984,7 @@ function addPoolItemRow(container, value = '', wikiImage = '', itemId = null) {
   const update = () => {
     clearTimeout(t);
     t = setTimeout(() => {
+      autoFillWiki(nameIn, wikiIn);
       const n = nameIn.value.trim(), w = wikiIn.value.trim();
       if (n || w) { img.src = itemSpriteUrl(n, w); img.style.display = ''; }
       else img.style.display = 'none';
@@ -1463,16 +1465,24 @@ async function rejectRouletteSubmission(id) {
   else alert(data.error || 'Reject failed.');
 }
 
+let _itemImageMap = {};
+
 async function loadWikiFilenames() {
   try {
     const res = await adminFetch('/api/admin/wiki-filenames');
-    const names = await res.json();
-    // Merge in client-side BOSSES img overrides
-    const all = new Set(names);
+    const data = await res.json();
+    _itemImageMap = data.itemMap || {};
+    const all = new Set(data.filenames || []);
     BOSSES.forEach(b => { if (b.img) all.add(b.img + '.png'); });
     document.getElementById('wiki-filename-suggestions').innerHTML =
       [...all].sort((a, b) => a.localeCompare(b)).map(n => `<option value="${escHtml(n)}">`).join('');
   } catch {}
+}
+
+function autoFillWiki(nameInput, wikiInput) {
+  if (wikiInput.value.trim()) return; // never overwrite user input
+  const mapped = _itemImageMap[nameInput.value.trim().toLowerCase()];
+  if (mapped) wikiInput.value = mapped;
 }
 
 checkAuth().then(ok => { if (ok) { loadEvents(); loadGamemodes(); loadBossManager(); loadWikiFilenames(); } });

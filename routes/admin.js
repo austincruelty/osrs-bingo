@@ -510,17 +510,37 @@ module.exports = function makeAdminRouter(broadcast) {
     res.json({ ok: true });
   });
 
-  // All unique wiki filenames stored across boss drops and tile items (for datalist autocomplete)
+  // All unique wiki filenames + item→filename map for bingo tile editor autocomplete/auto-fill
   router.get('/wiki-filenames', (req, res) => {
     const prefix = 'https://oldschool.runescape.wiki/w/Special:FilePath/';
-    const names = new Set();
-    db.all("SELECT DISTINCT image_url FROM roulette_boss_drops WHERE image_url IS NOT NULL AND image_url != ''")
-      .forEach(r => { if (r.image_url.startsWith(prefix)) names.add(r.image_url.slice(prefix.length)); });
+    const filenames = new Set();
+    const itemMap = {};
+
+    db.all("SELECT item_name, image_url FROM roulette_boss_drops WHERE image_url IS NOT NULL AND image_url != ''")
+      .forEach(r => {
+        let fn = null;
+        if (r.image_url.startsWith(prefix)) {
+          fn = r.image_url.slice(prefix.length);
+        } else {
+          // Handle direct /images/ URLs: extract last path component
+          const m = r.image_url.match(/\/([^/]+\.png)(?:\?.*)?$/i);
+          if (m) fn = m[1];
+        }
+        if (fn) {
+          filenames.add(fn);
+          if (r.item_name) itemMap[r.item_name.toLowerCase()] = fn;
+        }
+      });
+
     db.all("SELECT DISTINCT wiki_image FROM tile_items WHERE wiki_image IS NOT NULL AND wiki_image != ''")
-      .forEach(r => names.add(r.wiki_image.trim()));
+      .forEach(r => filenames.add(r.wiki_image.trim()));
     db.all("SELECT DISTINCT wiki_image FROM gamemode_tile_items WHERE wiki_image IS NOT NULL AND wiki_image != ''")
-      .forEach(r => names.add(r.wiki_image.trim()));
-    res.json([...names].sort((a, b) => a.localeCompare(b)));
+      .forEach(r => filenames.add(r.wiki_image.trim()));
+
+    res.json({
+      filenames: [...filenames].sort((a, b) => a.localeCompare(b)),
+      itemMap
+    });
   });
 
   router.delete('/submissions/:submissionId', (req, res) => {
