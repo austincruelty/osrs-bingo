@@ -456,6 +456,9 @@
   </div>
 </div>
 
+<!-- Wiki filename suggestions (populated from stored boss drops + tile items) -->
+<datalist id="wiki-filename-suggestions"></datalist>
+
 <!-- Image preview -->
 <div id="img-preview-modal" onclick="this.classList.remove('open')">
   <img id="img-preview" src="" alt="Screenshot">
@@ -916,7 +919,7 @@ function addItemRow(value = '', qty = 1, wikiImage = '', itemId = null) {
     <img src="${escHtml(spriteUrl)}" style="width:24px;height:24px;object-fit:contain;image-rendering:pixelated;flex-shrink:0;margin-top:7px;${value ? '' : 'display:none'}" onerror="this.style.display='none'" alt="">
     <div style="display:flex;flex-direction:column;flex:1;gap:3px;">
       <input type="text" class="item-name-input" placeholder="Item name" value="${escHtml(value)}" style="width:100%;">
-      <input type="text" class="item-wiki-input" placeholder="Wiki filename override (optional — e.g. Soulflame_horn)" value="${escHtml(wikiImage)}" style="width:100%;font-size:0.72rem;color:#667;background:#080d1a;border-color:#1a2030;" title="Leave blank to auto-generate from item name. Enter the OSRS Wiki image filename (without .png) if the sprite doesn't load.">
+      <input type="text" class="item-wiki-input" list="wiki-filename-suggestions" placeholder="Wiki filename override (optional — e.g. Soulflame_horn)" value="${escHtml(wikiImage)}" style="width:100%;font-size:0.72rem;color:#667;background:#080d1a;border-color:#1a2030;" title="Leave blank to auto-generate from item name. Enter the OSRS Wiki image filename (without .png) if the sprite doesn't load.">
     </div>
     <input type="number" class="item-qty-input" min="1" max="99" value="${parseInt(qty)||1}" title="Required quantity" style="width:52px;text-align:center;flex-shrink:0;">
     <button class="btn btn-gray" onclick="this.closest('.item-row').remove()" style="padding:4px 8px;flex-shrink:0;margin-top:2px;">✕</button>`;
@@ -971,7 +974,7 @@ function addPoolItemRow(container, value = '', wikiImage = '', itemId = null) {
   row.innerHTML = `
     <img src="${escHtml(spriteUrl)}" style="width:20px;height:20px;object-fit:contain;image-rendering:pixelated;flex-shrink:0;${value ? '' : 'display:none'}" onerror="this.style.display='none'" alt="">
     <input type="text" class="pool-item-name" placeholder="Item name" value="${escHtml(value)}">
-    <input type="text" class="pool-item-wiki" placeholder="Wiki filename (optional)" value="${escHtml(wikiImage)}">
+    <input type="text" class="pool-item-wiki" list="wiki-filename-suggestions" placeholder="Wiki filename (optional)" value="${escHtml(wikiImage)}">
     <button class="pool-item-remove" onclick="this.closest('.pool-item-row').remove()">✕</button>`;
   const img = row.querySelector('img');
   const nameIn = row.querySelector('.pool-item-name');
@@ -1460,7 +1463,19 @@ async function rejectRouletteSubmission(id) {
   else alert(data.error || 'Reject failed.');
 }
 
-checkAuth().then(ok => { if (ok) { loadEvents(); loadGamemodes(); loadBossManager(); } });
+async function loadWikiFilenames() {
+  try {
+    const res = await adminFetch('/api/admin/wiki-filenames');
+    const names = await res.json();
+    // Merge in client-side BOSSES img overrides
+    const all = new Set(names);
+    BOSSES.forEach(b => { if (b.img) all.add(b.img + '.png'); });
+    document.getElementById('wiki-filename-suggestions').innerHTML =
+      [...all].sort((a, b) => a.localeCompare(b)).map(n => `<option value="${escHtml(n)}">`).join('');
+  } catch {}
+}
+
+checkAuth().then(ok => { if (ok) { loadEvents(); loadGamemodes(); loadBossManager(); loadWikiFilenames(); } });
 
 // ── Collapsible sections ─────────────────────────────────────
 

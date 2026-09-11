@@ -510,6 +510,19 @@ module.exports = function makeAdminRouter(broadcast) {
     res.json({ ok: true });
   });
 
+  // All unique wiki filenames stored across boss drops and tile items (for datalist autocomplete)
+  router.get('/wiki-filenames', (req, res) => {
+    const prefix = 'https://oldschool.runescape.wiki/w/Special:FilePath/';
+    const names = new Set();
+    db.all("SELECT DISTINCT image_url FROM roulette_boss_drops WHERE image_url IS NOT NULL AND image_url != ''")
+      .forEach(r => { if (r.image_url.startsWith(prefix)) names.add(r.image_url.slice(prefix.length)); });
+    db.all("SELECT DISTINCT wiki_image FROM tile_items WHERE wiki_image IS NOT NULL AND wiki_image != ''")
+      .forEach(r => names.add(r.wiki_image.trim()));
+    db.all("SELECT DISTINCT wiki_image FROM gamemode_tile_items WHERE wiki_image IS NOT NULL AND wiki_image != ''")
+      .forEach(r => names.add(r.wiki_image.trim()));
+    res.json([...names].sort((a, b) => a.localeCompare(b)));
+  });
+
   router.delete('/submissions/:submissionId', (req, res) => {
     const sub = db.get('SELECT * FROM submissions WHERE id = ?', [req.params.submissionId]);
     if (!sub) return res.status(404).json({ error: 'Submission not found' });
