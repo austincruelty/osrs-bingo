@@ -263,50 +263,77 @@ async function init() {
   const W = 'https://oldschool.runescape.wiki/w/Special:FilePath/';
   const BOSS_DROP_URL_OVERRIDES = [
     // Chambers of Xeric
-    { boss:'Chambers of Xeric',  item:'Twisted Kit',                file:'Twisted_ancestral_colour_kit.png' },
-    { boss:'Chambers of Xeric',  item:'Dust',                       file:'Metamorphic_dust.png' },
-    { boss:'Chambers of Xeric',  item:'Pet',                        file:'Olmlet.png' },
+    { boss:'Chambers of Xeric',  item:'Twisted Kit',              file:'Twisted_ancestral_colour_kit.png' },
+    { boss:'Chambers of Xeric',  item:'Dust',                     file:'Metamorphic_dust.png' },
+    { boss:'Chambers of Xeric',  item:'Pet',                      file:'Olmlet.png' },
     // Theatre of Blood
-    { boss:'Theatre of Blood',   item:'Dust',                       file:'Sanguine_dust.png' },
-    { boss:'Theatre of Blood',   item:'Pet',                        file:"Lil'_zik.png" },
+    { boss:'Theatre of Blood',   item:'Dust',                     file:'Sanguine_dust.png' },
+    { boss:'Theatre of Blood',   item:'Pet',                      file:"Lil'_zik.png" },
     // Tombs of Amascut
-    { boss:'Tombs of Amascut',   item:'Pet',                        file:"Tumeken's_warden.png" },
+    { boss:'Tombs of Amascut',   item:'Pet',                      file:"Tumeken's_warden.png" },
     // Desert Treasure II
-    { boss:'Duke Sucellus',      item:'Pet',                        file:'Duke_(pet).png' },
-    { boss:'The Leviathan',      item:'Pet',                        file:"Lil'_leviathan.png" },
-    { boss:'Vardorvis',          item:'Pet',                        file:'Butch.png' },
-    { boss:'The Whisperer',      item:'Pet',                        file:'Wisp.png' },
+    { boss:'Duke Sucellus',      item:'Pet',                      file:'Duke_(pet).png' },
+    { boss:'The Leviathan',      item:'Pet',                      file:"Lil'_leviathan.png" },
+    { boss:'Vardorvis',          item:'Pet',                      file:'Butch.png' },
+    { boss:'The Whisperer',      item:'Pet',                      file:'Wisp.png' },
     // Nex
-    { boss:'Nex',                item:'Pet',                        file:'Nexling.png' },
+    { boss:'Nex',                item:'Pet',                      file:'Nexling.png' },
     // The Nightmare
-    { boss:'The Nightmare',      item:'Jar',                        file:'Jar_of_dreams.png' },
-    { boss:'The Nightmare',      item:'Pet',                        file:'Little_nightmare.png' },
+    { boss:'The Nightmare',      item:'Jar',                      file:'Jar_of_dreams.png' },
+    { boss:'The Nightmare',      item:'Pet',                      file:'Little_nightmare.png' },
     // Corporeal Beast
-    { boss:'Corporeal Beast',    item:'Jar',                        file:'Jar_of_spirits.png' },
-    { boss:'Corporeal Beast',    item:'Pet',                        file:'Corporeal_critter.png' },
+    { boss:'Corporeal Beast',    item:'Jar',                      file:'Jar_of_spirits.png' },
+    { boss:'Corporeal Beast',    item:'Pet',                      file:'Corporeal_critter.png' },
     // Gauntlet
-    { boss:'Gauntlet',           item:'Pet',                        file:'Youngllef.png' },
-    // Wilderness bosses
-    { boss:'Artio/Callisto',     item:'Pet',                        file:'Callisto_cub.png' },
-    { boss:"Calvar'ion/Vet'ion", item:'Pet',                        file:"Vet'ion_jr..png" },
-    { boss:'Spindel/Venenatis',  item:'Pet',                        file:'Venenatis_spiderling.png' },
-    // GWD
-    { boss:'Armadyl',            item:'Pet',                        file:"Kree'arra.png" },
-    { boss:'Zamorak',            item:'Pet',                        file:"K'ril_Jr..png" },
-    { boss:'Saradomin',          item:'Pet',                        file:'Commander_zilyana_jr..png' },
-    { boss:'Bandos',             item:'Pet',                        file:'General_graardor_jr..png' },
-    // Dagannoth Kings (3 pets — Rex shown as representative)
-    { boss:'Dagannoth Kings',    item:'Pet',                        file:'Dagannoth_rex_jr..png' },
+    { boss:'Gauntlet',           item:'Pet',                      file:'Youngllef.png' },
+    // Amoxliatl (user-confirmed)
+    { boss:'Amoxliatl',          item:'Glacial Temotlatl',        file:'Glacial_temotli.png' },
+    { boss:'Amoxliatl',          item:'Pet',                      file:'Moxi.png' },
+    // Armadyl (user-confirmed)
+    { boss:'Armadyl',            item:'Armadyl Helmet',           file:'Armadyl_helmet.png' },
+    { boss:'Armadyl',            item:'Armadyl Chestplate',       file:'Armadyl_chestplate.png' },
+    { boss:'Armadyl',            item:'Armadyl Chainskirt',       file:'Armadyl_chainskirt.png' },
+    { boss:'Armadyl',            item:'Armadyl Godsword',         file:'Armadyl_hilt.png' },
+    { boss:'Armadyl',            item:'Pet',                      file:"Pet_Kree'arra.png" },
+    // Bandos (user-confirmed)
+    { boss:'Bandos',             item:'Bandos Godsword',          file:'Bandos_hilt.png' },
+    { boss:'Bandos',             item:'Bandos Chestplate',        file:'Bandos_chestplate.png' },
+    { boss:'Bandos',             item:'Bandos Tassets',           file:'Bandos_tassets.png' },
+    { boss:'Bandos',             item:'Bandos Boots',             file:'Bandos_boots.png' },
+    { boss:'Bandos',             item:'Pet',                      file:'Pet_General_Graardor.png' },
+    // Artio/Callisto (user-confirmed)
+    { boss:'Artio/Callisto',     item:'Claws of Callisto',        file:'Claws_of_Callisto.png' },
+    { boss:'Artio/Callisto',     item:'Tyrannical Ring',          file:'Tyrannical_ring.png' },
+    { boss:'Artio/Callisto',     item:'Voidwaker Hilt',           file:'Voidwaker_hilt.png' },
+    { boss:'Artio/Callisto',     item:'Pet',                      file:'Callisto_cub.png' },
+    // Calvar'ion/Vet'ion (user-confirmed)
+    { boss:"Calvar'ion/Vet'ion", item:"Skull of Vet'ion",         file:"Skull_of_Vet'ion.png" },
+    { boss:"Calvar'ion/Vet'ion", item:'Ring of the Gods',         file:'Ring_of_the_gods.png' },
+    { boss:"Calvar'ion/Vet'ion", item:'Voidwaker Blade',          file:'Voidwaker_blade.png' },
+    { boss:"Calvar'ion/Vet'ion", item:'Pet',                      file:"Vet'ion_Jr..png" },
+    // Dagannoth Kings (user-confirmed — 3 separate pet drops)
+    { boss:'Dagannoth Kings',    item:"Archer's Ring",            file:'Archers_ring.png' },
+    { boss:'Dagannoth Kings',    item:"Berserker's Ring",         file:'Berserker_ring.png' },
+    { boss:'Dagannoth Kings',    item:"Seer's Ring",              file:'Seers_ring.png' },
+    { boss:'Dagannoth Kings',    item:"Warrior's Ring",           file:'Warrior_ring.png' },
+    { boss:'Dagannoth Kings',    item:'Pet',                      file:'Pet_Dagannoth_Rex.png' },
+    { boss:'Dagannoth Kings',    item:'Pet Dagannoth Prime',      file:'Pet_Dagannoth_Prime.png' },
+    { boss:'Dagannoth Kings',    item:'Pet Dagannoth Rex',        file:'Pet_Dagannoth_Rex.png' },
+    { boss:'Dagannoth Kings',    item:'Pet Dagannoth Supreme',    file:'Pet_Dagannoth_Supreme.png' },
+    // Wilderness — Spindel/Venenatis
+    { boss:'Spindel/Venenatis',  item:'Pet',                      file:'Venenatis_spiderling.png' },
+    // GWD — remaining
+    { boss:'Zamorak',            item:'Pet',                      file:"K'ril_Jr..png" },
+    { boss:'Saradomin',          item:'Pet',                      file:'Commander_zilyana_jr..png' },
     // Other
-    { boss:'Vorkath',            item:'Pet',                        file:'Vorki.png' },
-    { boss:'Zulrah',             item:'Pet',                        file:'Snakeling.png' },
-    { boss:'Sarachnis',          item:'Pet',                        file:'Sraracha.png' },
-    { boss:'Hueycoatl',          item:'Pet',                        file:'Baby_hueycoatl.png' },
-    { boss:'Kalphite Queen',     item:'KQ Head',                    file:"Kalphite_queen's_head.png" },
-    { boss:'Kalphite Queen',     item:'Pet',                        file:'Kalphite_princess.png' },
-    { boss:'Amoxliatl',          item:'Pet',                        file:'Baby_amoxliatl.png' },
-    { boss:'King Black Dragon',  item:'KBD Heads',                  file:'King_black_dragon_heads.png' },
-    { boss:'King Black Dragon',  item:'Pet',                        file:'Prince_black_dragon.png' },
+    { boss:'Vorkath',            item:'Pet',                      file:'Vorki.png' },
+    { boss:'Zulrah',             item:'Pet',                      file:'Snakeling.png' },
+    { boss:'Sarachnis',          item:'Pet',                      file:'Sraracha.png' },
+    { boss:'Hueycoatl',          item:'Pet',                      file:'Baby_hueycoatl.png' },
+    { boss:'Kalphite Queen',     item:'KQ Head',                  file:"Kalphite_queen's_head.png" },
+    { boss:'Kalphite Queen',     item:'Pet',                      file:'Kalphite_princess.png' },
+    { boss:'King Black Dragon',  item:'KBD Heads',                file:'King_black_dragon_heads.png' },
+    { boss:'King Black Dragon',  item:'Pet',                      file:'Prince_black_dragon.png' },
   ];
   for (const o of BOSS_DROP_URL_OVERRIDES) {
     try {
@@ -315,6 +342,24 @@ async function init() {
          WHERE item_name = ? AND image_url IS NULL
            AND boss_id = (SELECT id FROM roulette_bosses WHERE boss_name = ?)`,
         [W + o.file, o.item, o.boss]
+      );
+    } catch {}
+  }
+  // Correct previously-migrated entries where the old filename was wrong (targets the old URL specifically)
+  const CORRECTIONS = [
+    { boss:'Amoxliatl',          item:'Pet',  old:'Baby_amoxliatl.png',    file:'Moxi.png' },
+    { boss:'Armadyl',            item:'Pet',  old:"Kree'arra.png",          file:"Pet_Kree'arra.png" },
+    { boss:'Bandos',             item:'Pet',  old:'General_graardor_jr..png', file:'Pet_General_Graardor.png' },
+    { boss:"Calvar'ion/Vet'ion", item:'Pet',  old:"Vet'ion_jr..png",        file:"Vet'ion_Jr..png" },
+    { boss:'Dagannoth Kings',    item:'Pet',  old:'Dagannoth_rex_jr..png',  file:'Pet_Dagannoth_Rex.png' },
+  ];
+  for (const c of CORRECTIONS) {
+    try {
+      db.run(
+        `UPDATE roulette_boss_drops SET image_url = ?
+         WHERE item_name = ? AND image_url = ?
+           AND boss_id = (SELECT id FROM roulette_bosses WHERE boss_name = ?)`,
+        [W + c.file, c.item, W + c.old, c.boss]
       );
     } catch {}
   }
