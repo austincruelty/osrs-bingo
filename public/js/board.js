@@ -653,7 +653,7 @@ function renderBingoTimer() {
     ms = s.timer_remaining_ms || 0;
   }
   if (ms <= 0 && !s.timer_running) { card.style.display = 'none'; return; }
-  card.style.display = '';
+  card.style.display = 'block';
   const totalSec = Math.ceil(ms / 1000);
   const d = Math.floor(totalSec / 86400);
   const h = Math.floor((totalSec % 86400) / 3600);
