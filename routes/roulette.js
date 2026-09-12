@@ -38,7 +38,7 @@ function getConfig(eventId) {
     || { starting_bank: 500, respin_cost: 200, bonus_value: 100 };
 }
 
-module.exports = function makeRouletteRouter(broadcast) {
+module.exports = function makeRouletteRouter(broadcast, broadcastSpin) {
   const router = express.Router();
 
   // List all bosses with drops
@@ -150,14 +150,30 @@ module.exports = function makeRouletteRouter(broadcast) {
         [req.params.id, teamNum, tier, boss.id, bonusDrop?.id || null, spinCost]
       );
 
+      const bossIndex = bosses.findIndex(b => b.id === boss.id);
+      const teamRow = db.get('SELECT team_name FROM event_teams WHERE event_id = ? AND team_number = ?', [req.params.id, teamNum]);
+      const teamName = teamRow?.team_name || `Team ${teamNum}`;
+
       broadcast(req.params.id);
+      if (broadcastSpin) broadcastSpin(req.params.id, {
+        event_id: req.params.id,
+        team: teamNum,
+        team_name: teamName,
+        wheel_tier: tier,
+        boss_name: boss.boss_name,
+        boss_index: bossIndex,
+        boss_count: bosses.length,
+        bosses: bosses.map(b => ({ id: b.id, boss_name: b.boss_name })),
+        initiator_socket: req.body.socket_id || null,
+      });
+
       res.json({
         spin_id: result.lastInsertRowid,
         boss,
         bonus_drop: bonusDrop,
         spin_cost: spinCost,
         is_respin: isRespin,
-        boss_index: bosses.findIndex(b => b.id === boss.id),
+        boss_index: bossIndex,
         boss_count: bosses.length,
         bosses: bosses.map(b => ({ id: b.id, boss_name: b.boss_name })),
       });

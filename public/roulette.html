@@ -64,6 +64,24 @@ header h1 { color: #c89b3c; font-size: 1.2rem; letter-spacing: 0.05em; }
 .timer-digits.urgent { color: #e05050; animation: timerPulse 1s infinite; }
 @keyframes timerPulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
+/* Spin announcement toast */
+#spin-toast {
+  position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-120px);
+  z-index: 200; background: linear-gradient(135deg, #111827, #0d1525);
+  border: 1px solid #2a3a54; border-top: 3px solid #c89b3c;
+  border-radius: 10px; padding: 16px 28px; text-align: center;
+  box-shadow: 0 8px 40px #00000088; min-width: 280px; max-width: 420px;
+  transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease;
+  opacity: 0; pointer-events: none;
+}
+#spin-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.toast-label { font-size: 0.65rem; color: #556; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 4px; }
+.toast-team { font-family: 'Cinzel', serif; font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; }
+.toast-boss { font-family: 'Cinzel', serif; font-size: 1.4rem; font-weight: 700;
+  background: linear-gradient(135deg, #c89b3c 0%, #e8c96a 50%, #c89b3c 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.toast-wheel { font-size: 0.7rem; color: #4a7fc1; margin-top: 4px; letter-spacing: 0.05em; }
+
 /* Wheels section */
 .wheels-section { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 24px; justify-content: center; }
 .wheel-panel { background: #111827; border: 1px solid #1e2a40; border-radius: 10px; padding: 20px; flex: 1; min-width: 280px; max-width: 400px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
@@ -804,7 +822,7 @@ async function doSpin(tier) {
     const res = await fetch(`/api/roulette/events/${currentEventId}/spin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ team: teamNum, wheel_tier: tier })
+      body: JSON.stringify({ team: teamNum, wheel_tier: tier, socket_id: socket.id })
     });
     const data = await res.json();
     if (!res.ok) { resultEl.innerHTML = `<span style="color:#e05050;">${escHtml(data.error)}</span>`; btn.disabled = false; return; }
@@ -978,6 +996,70 @@ loadEvents().then(() => {
   const eventId = params.get('event');
   if (eventId) selectEvent(parseInt(eventId));
 });
+
+// ── Spin announcement ─────────────────────────────────────────
+let _toastTimeout = null;
+
+function showSpinToast(data) {
+  const toast = document.getElementById('spin-toast');
+  if (!toast) return;
+  const color = teamColors(data.team);
+  toast.querySelector('.toast-team').innerHTML =
+    `<span style="color:${color};">${escHtml(data.team_name)}</span> just spun`;
+  toast.querySelector('.toast-boss').textContent = data.boss_name;
+  toast.querySelector('.toast-wheel').textContent = `Wheel ${data.wheel_tier} — ${data.wheel_tier === 1 ? 'High Tier' : 'Mid Tier'}`;
+  toast.classList.add('show');
+  clearTimeout(_toastTimeout);
+  _toastTimeout = setTimeout(() => toast.classList.remove('show'), 6000);
+}
+
+function playSpinSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Short dramatic whoosh + impact
+    const notes = [220, 277.18, 329.63, 440, 554.37];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      const t = ctx.currentTime + i * 0.07;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.15, t + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      osc.start(t); osc.stop(t + 0.3);
+    });
+  } catch {}
+}
+
+socket.on('spin-announced', (data) => {
+  if (String(data.event_id) !== String(currentEventId)) return;
+  const isInitiator = data.initiator_socket && data.initiator_socket === socket.id;
+  showSpinToast(data);
+  playSpinSound();
+  // Animate the wheel for non-initiators
+  if (!isInitiator) {
+    const tier = data.wheel_tier;
+    const canvas = document.getElementById(`wheel${tier}`);
+    const bosses = allBosses.filter(b => b.wheel_tier === tier);
+    if (canvas && bosses.length && !( tier === 1 ? spinning1 : spinning2 )) {
+      if (tier === 1) spinning1 = true; else spinning2 = true;
+      spinAnimation(canvas, bosses, data.boss_index, tier === 1 ? wheel1Rot : wheel2Rot, finalRot => {
+        if (tier === 1) { wheel1Rot = finalRot; spinning1 = false; }
+        else { wheel2Rot = finalRot; spinning2 = false; }
+      });
+    }
+  }
+});
 </script>
+
+<div id="spin-toast">
+  <div class="toast-label">🎰 Spin Result</div>
+  <div class="toast-team"></div>
+  <div class="toast-boss"></div>
+  <div class="toast-wheel"></div>
+</div>
+
 </body>
 </html>

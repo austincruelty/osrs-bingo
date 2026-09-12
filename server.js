@@ -24,10 +24,11 @@ async function main() {
 
   const broadcast = (eventId) => io.to(`event-${eventId}`).emit('board-update', { eventId });
   const broadcastTimer = (eventId, timerState) => io.to(`event-${eventId}`).emit('timer-update', timerState);
+  const broadcastSpin = (eventId, data) => io.to(`event-${eventId}`).emit('spin-announced', data);
 
   app.use('/api/admin', adminRoutes(broadcast, broadcastTimer));
   app.use('/api', makeGameRouter(broadcast));
-  app.use('/api/roulette', makeRouletteRouter(broadcast));
+  app.use('/api/roulette', makeRouletteRouter(broadcast, broadcastSpin));
 
   // Return JSON errors instead of HTML so the browser can read them
   app.use((err, req, res, next) => {
