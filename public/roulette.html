@@ -49,11 +49,20 @@ header h1 { color: #c89b3c; font-size: 1.2rem; letter-spacing: 0.05em; }
 .bank-completed { font-size: 0.72rem; color: #4a7fc1; margin-top: 4px; }
 
 /* Tabs */
-.tabs { display: flex; gap: 2px; margin-bottom: 16px; }
+.tabs-row { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
+.tabs { display: flex; gap: 2px; }
 .tab-btn { background: #0a0f1e; border: 1px solid #1e2a40; border-radius: 5px 5px 0 0; padding: 7px 18px; font-size: 0.82rem; cursor: pointer; color: #7a9ab8; border-bottom: none; }
 .tab-btn.active { background: #111827; color: #c89b3c; border-color: #2a3a54; border-bottom: 2px solid #111827; margin-bottom: -1px; }
 .tab-content { display: none; }
 .tab-content.active { display: block; }
+
+/* Event timer */
+.event-timer { display: flex; align-items: center; gap: 10px; padding: 5px 14px; background: #111827; border: 1px solid #1e2a40; border-radius: 6px; flex-shrink: 0; }
+.event-timer.hidden { display: none; }
+.timer-label { font-size: 0.62rem; color: #556; text-transform: uppercase; letter-spacing: 0.1em; }
+.timer-digits { font-family: 'Cinzel', serif; font-size: 1rem; font-weight: 700; color: #c89b3c; letter-spacing: 0.05em; white-space: nowrap; }
+.timer-digits.urgent { color: #e05050; animation: timerPulse 1s infinite; }
+@keyframes timerPulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
 /* Wheels section */
 .wheels-section { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 24px; justify-content: center; }
@@ -222,11 +231,17 @@ canvas { border-radius: 50%; display: block; }
 
     <!-- Center content -->
     <div>
-      <!-- Tabs -->
-      <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('wheels')">🎰 Wheels</button>
-        <button class="tab-btn" onclick="switchTab('history')">📜 History</button>
-        <button class="tab-btn" onclick="switchTab('rules')">📋 Rules</button>
+      <!-- Tabs + timer -->
+      <div class="tabs-row">
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('wheels')">🎰 Wheels</button>
+          <button class="tab-btn" onclick="switchTab('history')">📜 History</button>
+          <button class="tab-btn" onclick="switchTab('rules')">📋 Rules</button>
+        </div>
+        <div class="event-timer hidden" id="event-timer">
+          <span class="timer-label">Time Left</span>
+          <span class="timer-digits" id="timer-digits">—</span>
+        </div>
       </div>
 
       <!-- Wheels tab -->
@@ -520,6 +535,7 @@ async function selectEvent(id) {
   socket.emit('join-event', id);
   await loadBosses();
   await loadState();
+  loadTimer(id);
 }
 
 // ── Bosses ───────────────────────────────────────────────────
@@ -538,6 +554,57 @@ async function loadState() {
   currentState = await res.json();
   renderState();
 }
+
+// ── Timer ─────────────────────────────────────────────────────
+let _timerInterval = null;
+let _timerState = null;
+
+function applyTimerState(state) {
+  _timerState = state;
+  renderTimer();
+}
+
+function renderTimer() {
+  const el = document.getElementById('event-timer');
+  const digits = document.getElementById('timer-digits');
+  if (!el || !digits) return;
+  const s = _timerState;
+  if (!s || (s.timer_remaining_ms == null && !s.timer_end)) {
+    el.classList.add('hidden'); return;
+  }
+  let ms;
+  if (s.timer_running && s.timer_end) {
+    ms = Math.max(0, new Date(s.timer_end).getTime() - Date.now());
+  } else {
+    ms = s.timer_remaining_ms || 0;
+  }
+  if (ms <= 0 && !s.timer_running) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  const totalSec = Math.ceil(ms / 1000);
+  const d = Math.floor(totalSec / 86400);
+  const h = Math.floor((totalSec % 86400) / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const parts = [];
+  if (d > 0) parts.push(d + 'd');
+  parts.push(String(h).padStart(2,'0') + 'h');
+  parts.push(String(m).padStart(2,'0') + 'm');
+  digits.textContent = parts.join(' ');
+  digits.classList.toggle('urgent', ms < 3600000 && ms > 0);
+}
+
+async function loadTimer(eventId) {
+  try {
+    const res = await fetch(`/api/events/${eventId}/timer`);
+    if (res.ok) applyTimerState(await res.json());
+  } catch {}
+}
+
+socket.on('timer-update', (state) => {
+  if (String(state.event_id) !== String(currentEventId)) return;
+  applyTimerState(state);
+});
+
+setInterval(() => { if (_timerState?.timer_running) renderTimer(); }, 30000);
 
 socket.on('board-update', ({ eventId }) => {
   if (String(eventId) !== String(currentEventId)) return;

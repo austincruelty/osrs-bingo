@@ -1,7 +1,7 @@
 const express = require('express');
 const { db } = require('../database');
 
-module.exports = function makeAdminRouter(broadcast) {
+module.exports = function makeAdminRouter(broadcast, broadcastTimer) {
   const router = express.Router();
 
   router.use((req, res, next) => {
@@ -549,6 +549,66 @@ module.exports = function makeAdminRouter(broadcast) {
     db.run('DELETE FROM submissions WHERE id = ?', [req.params.submissionId]);
     broadcast(sub.event_id);
     res.json({ ok: true });
+  });
+
+  // ── Event Timer ───────────────────────────────────────────────
+  function getTimerState(eventId) {
+    const ev = db.get('SELECT timer_end, timer_remaining_ms, timer_running FROM events WHERE id = ?', [eventId]);
+    if (!ev) return null;
+    return { event_id: eventId, timer_end: ev.timer_end, timer_remaining_ms: ev.timer_remaining_ms, timer_running: ev.timer_running ? 1 : 0 };
+  }
+
+  router.get('/events/:id/timer', (req, res) => {
+    const state = getTimerState(Number(req.params.id));
+    if (!state) return res.status(404).json({ error: 'Event not found' });
+    res.json(state);
+  });
+
+  router.post('/events/:id/timer/set', (req, res) => {
+    const eventId = Number(req.params.id);
+    const ev = db.get('SELECT id FROM events WHERE id = ?', [eventId]);
+    if (!ev) return res.status(404).json({ error: 'Event not found' });
+    const { days = 0, hours = 0, minutes = 0 } = req.body;
+    const ms = ((Number(days) * 24 + Number(hours)) * 60 + Number(minutes)) * 60 * 1000;
+    db.run('UPDATE events SET timer_remaining_ms = ?, timer_end = NULL, timer_running = 0 WHERE id = ?', [ms, eventId]);
+    const state = getTimerState(eventId);
+    if (broadcastTimer) broadcastTimer(eventId, state);
+    res.json(state);
+  });
+
+  router.post('/events/:id/timer/start', (req, res) => {
+    const eventId = Number(req.params.id);
+    const ev = db.get('SELECT timer_remaining_ms, timer_running FROM events WHERE id = ?', [eventId]);
+    if (!ev) return res.status(404).json({ error: 'Event not found' });
+    if (ev.timer_running) return res.json(getTimerState(eventId));
+    const remaining = ev.timer_remaining_ms || 0;
+    const end = new Date(Date.now() + remaining).toISOString();
+    db.run('UPDATE events SET timer_end = ?, timer_running = 1, timer_remaining_ms = ? WHERE id = ?', [end, remaining, eventId]);
+    const state = getTimerState(eventId);
+    if (broadcastTimer) broadcastTimer(eventId, state);
+    res.json(state);
+  });
+
+  router.post('/events/:id/timer/stop', (req, res) => {
+    const eventId = Number(req.params.id);
+    const ev = db.get('SELECT timer_end, timer_running FROM events WHERE id = ?', [eventId]);
+    if (!ev) return res.status(404).json({ error: 'Event not found' });
+    let remaining = 0;
+    if (ev.timer_running && ev.timer_end) {
+      remaining = Math.max(0, new Date(ev.timer_end).getTime() - Date.now());
+    }
+    db.run('UPDATE events SET timer_running = 0, timer_remaining_ms = ?, timer_end = NULL WHERE id = ?', [remaining, eventId]);
+    const state = getTimerState(eventId);
+    if (broadcastTimer) broadcastTimer(eventId, state);
+    res.json(state);
+  });
+
+  router.post('/events/:id/timer/clear', (req, res) => {
+    const eventId = Number(req.params.id);
+    db.run('UPDATE events SET timer_running = 0, timer_remaining_ms = NULL, timer_end = NULL WHERE id = ?', [eventId]);
+    const state = getTimerState(eventId);
+    if (broadcastTimer) broadcastTimer(eventId, state);
+    res.json(state);
   });
 
   return router;

@@ -3,6 +3,7 @@ let currentEventId = null;
 let currentBoard = null;
 let tilesData = [];
 let selectedTeam = null; // null = all teams, or a team_number integer
+let _timerState = null;
 
 const OSRS_MASTER_DROPS = [
   // God Wars Dungeon
@@ -149,6 +150,7 @@ eventSelect.addEventListener('change', () => {
     loadBoard();
     loadTilesForModal();
     loadFeed();
+    loadBingoTimer(currentEventId);
   } else {
     boardEl.innerHTML = '';
     document.getElementById('scoreboard').style.display = 'none';
@@ -188,7 +190,7 @@ function renderBoard(data) {
   // ── Scoreboard ──
   const scoreboard = document.getElementById('scoreboard');
   scoreboard.style.display = 'flex';
-  scoreboard.innerHTML = teams.map(team => {
+  const teamCards = teams.map(team => {
     const color = teamColor(team.team_number);
     const isActive = selectedTeam === team.team_number;
     const isDimmed = selectedTeam !== null && selectedTeam !== team.team_number;
@@ -207,7 +209,14 @@ function renderBoard(data) {
         <div class="view-hint">Click to view board</div>
         <div class="team-roster">${teamMembers.map(m => `<span class="roster-pill">${escHtml(m.player_name)}</span>`).join('')}</div>
       </div>`;
-  }).join('');
+  });
+  const timerCard = `<div class="timer-center-card" id="timer-center-card"><div class="timer-center-label">Time Left</div><div class="timer-center-digits" id="timer-center-digits">—</div></div>`;
+  if (teamCards.length === 2) {
+    scoreboard.innerHTML = teamCards[0] + timerCard + teamCards[1];
+  } else {
+    scoreboard.innerHTML = teamCards.join('') + timerCard;
+  }
+  renderBingoTimer();
 
   // ── Legend ──
   const legend = document.getElementById('legend');
@@ -627,6 +636,50 @@ async function loadFeed() {
 }
 
 setInterval(() => { if (currentEventId) loadFeed(); }, 60000);
+
+// ── Timer ────────────────────────────────────────────────────
+function renderBingoTimer() {
+  const card = document.getElementById('timer-center-card');
+  const digits = document.getElementById('timer-center-digits');
+  if (!card || !digits) return;
+  const s = _timerState;
+  if (!s || (s.timer_remaining_ms == null && !s.timer_end)) {
+    card.style.display = 'none'; return;
+  }
+  let ms;
+  if (s.timer_running && s.timer_end) {
+    ms = Math.max(0, new Date(s.timer_end).getTime() - Date.now());
+  } else {
+    ms = s.timer_remaining_ms || 0;
+  }
+  if (ms <= 0 && !s.timer_running) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  const totalSec = Math.ceil(ms / 1000);
+  const d = Math.floor(totalSec / 86400);
+  const h = Math.floor((totalSec % 86400) / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const parts = [];
+  if (d > 0) parts.push(d + 'd');
+  parts.push(String(h).padStart(2,'0') + 'h');
+  parts.push(String(m).padStart(2,'0') + 'm');
+  digits.textContent = parts.join(' ');
+  digits.style.color = (ms < 3600000 && ms > 0) ? '#e05050' : '#c89b3c';
+}
+
+async function loadBingoTimer(eventId) {
+  try {
+    const res = await fetch(`/api/events/${eventId}/timer`);
+    if (res.ok) { _timerState = await res.json(); renderBingoTimer(); }
+  } catch {}
+}
+
+socket.on('timer-update', (state) => {
+  if (String(state.event_id) !== String(currentEventId)) return;
+  _timerState = state;
+  renderBingoTimer();
+});
+
+setInterval(() => { if (_timerState?.timer_running) renderBingoTimer(); }, 30000);
 
 loadEvents().then(() => {
   const params = new URLSearchParams(location.search);

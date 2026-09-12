@@ -23,8 +23,9 @@ async function main() {
   app.use('/uploads', express.static(path.join(DATA_DIR, 'uploads')));
 
   const broadcast = (eventId) => io.to(`event-${eventId}`).emit('board-update', { eventId });
+  const broadcastTimer = (eventId, timerState) => io.to(`event-${eventId}`).emit('timer-update', timerState);
 
-  app.use('/api/admin', adminRoutes(broadcast));
+  app.use('/api/admin', adminRoutes(broadcast, broadcastTimer));
   app.use('/api', makeGameRouter(broadcast));
   app.use('/api/roulette', makeRouletteRouter(broadcast));
 

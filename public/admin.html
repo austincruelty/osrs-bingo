@@ -265,6 +265,30 @@
     </div>
   </section>
 
+  <!-- Event Timer -->
+  <section id="timer-section" style="display:none;margin-top:20px;">
+    <h2 style="color:#c89b3c;font-family:'Cinzel',serif;font-size:1rem;margin-bottom:14px;letter-spacing:0.05em;">⏱ Event Timer</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+      <div>
+        <label style="display:block;font-size:0.75rem;color:#8899aa;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Days</label>
+        <input type="number" id="timer-days" min="0" max="99" value="0" style="width:70px;background:#080c16;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:7px 10px;font-size:1rem;text-align:center;">
+      </div>
+      <div>
+        <label style="display:block;font-size:0.75rem;color:#8899aa;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Hours</label>
+        <input type="number" id="timer-hours" min="0" max="23" value="0" style="width:70px;background:#080c16;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:7px 10px;font-size:1rem;text-align:center;">
+      </div>
+      <div>
+        <label style="display:block;font-size:0.75rem;color:#8899aa;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Minutes</label>
+        <input type="number" id="timer-minutes" min="0" max="59" value="0" style="width:70px;background:#080c16;color:#d4cbb8;border:1px solid #1e2a40;border-radius:4px;padding:7px 10px;font-size:1rem;text-align:center;">
+      </div>
+      <button class="btn btn-blue" onclick="timerSet()">Set</button>
+      <button class="btn btn-gold" id="timer-start-btn" onclick="timerStart()">▶ Start</button>
+      <button class="btn" id="timer-stop-btn" onclick="timerStop()" style="background:#2a1a1a;color:#e08080;border:1px solid #4a2020;">⏹ Stop</button>
+      <button class="btn" onclick="timerClear()" style="background:#1a1a2a;color:#667;border:1px solid #2a2a3a;font-size:0.78rem;">Clear</button>
+    </div>
+    <div id="timer-status" style="margin-top:10px;font-size:0.82rem;color:#556;font-style:italic;"></div>
+  </section>
+
   <!-- Team Roster -->
   <section id="roster-section" style="display:none">
     <div class="section-hdr" onclick="toggleSection('roster-body')">
@@ -631,6 +655,7 @@ async function selectEvent(ev) {
 
   document.getElementById('edit-section').style.display = 'block';
   document.getElementById('roster-section').style.display = 'block';
+  document.getElementById('timer-section').style.display = 'block';
   document.getElementById('board-section').style.display = isRoulette ? 'none' : 'block';
   document.getElementById('submissions-section').style.display = isRoulette ? 'none' : 'block';
   document.getElementById('roulette-link-section').style.display = isRoulette ? 'block' : 'none';
@@ -661,6 +686,8 @@ async function selectEvent(ev) {
   renderRosterPanels(teams);
 
   restoreSectionState('roster-body');
+
+  loadAdminTimer(ev.id);
 
   if (isRoulette) {
     restoreSectionState('roulette-submissions-body');
@@ -1486,6 +1513,69 @@ function autoFillWiki(nameInput, wikiInput) {
 }
 
 checkAuth().then(ok => { if (ok) { loadEvents(); loadGamemodes(); loadBossManager(); loadWikiFilenames(); } });
+
+// ── Admin Timer ───────────────────────────────────────────────
+async function loadAdminTimer(eventId) {
+  try {
+    const res = await adminFetch(`/api/admin/events/${eventId}/timer`);
+    if (res.ok) renderAdminTimer(await res.json());
+  } catch {}
+}
+
+function renderAdminTimer(state) {
+  const statusEl = document.getElementById('timer-status');
+  if (!statusEl) return;
+  if (!state) { statusEl.textContent = ''; return; }
+  const startBtn = document.getElementById('timer-start-btn');
+  const stopBtn  = document.getElementById('timer-stop-btn');
+  if (startBtn) startBtn.disabled = !!state.timer_running;
+  if (stopBtn)  stopBtn.disabled  = !state.timer_running;
+  let ms;
+  if (state.timer_running && state.timer_end) {
+    ms = Math.max(0, new Date(state.timer_end).getTime() - Date.now());
+  } else {
+    ms = state.timer_remaining_ms || 0;
+  }
+  if (!ms && !state.timer_running) { statusEl.textContent = 'No timer set.'; return; }
+  const totalSec = Math.ceil(ms / 1000);
+  const d = Math.floor(totalSec / 86400);
+  const h = Math.floor((totalSec % 86400) / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const parts = [];
+  if (d > 0) parts.push(d + 'd');
+  parts.push(String(h).padStart(2,'0') + 'h');
+  parts.push(String(m).padStart(2,'0') + 'm');
+  statusEl.textContent = (state.timer_running ? '▶ Running — ' : '⏹ Paused — ') + parts.join(' ') + ' remaining';
+}
+
+async function timerSet() {
+  if (!selectedEventId) return;
+  const days    = Number(document.getElementById('timer-days').value)    || 0;
+  const hours   = Number(document.getElementById('timer-hours').value)   || 0;
+  const minutes = Number(document.getElementById('timer-minutes').value) || 0;
+  const res = await adminFetch(`/api/admin/events/${selectedEventId}/timer/set`, {
+    method: 'POST', body: JSON.stringify({ days, hours, minutes })
+  });
+  if (res.ok) renderAdminTimer(await res.json());
+}
+
+async function timerStart() {
+  if (!selectedEventId) return;
+  const res = await adminFetch(`/api/admin/events/${selectedEventId}/timer/start`, { method: 'POST' });
+  if (res.ok) renderAdminTimer(await res.json());
+}
+
+async function timerStop() {
+  if (!selectedEventId) return;
+  const res = await adminFetch(`/api/admin/events/${selectedEventId}/timer/stop`, { method: 'POST' });
+  if (res.ok) renderAdminTimer(await res.json());
+}
+
+async function timerClear() {
+  if (!selectedEventId) return;
+  const res = await adminFetch(`/api/admin/events/${selectedEventId}/timer/clear`, { method: 'POST' });
+  if (res.ok) renderAdminTimer(await res.json());
+}
 
 // ── Collapsible sections ─────────────────────────────────────
 

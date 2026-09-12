@@ -196,6 +196,11 @@ async function init() {
   // ── Game type on events ──────────────────────────────────────
   try { _db.run("ALTER TABLE events ADD COLUMN game_type TEXT NOT NULL DEFAULT 'bingo'"); } catch {}
 
+  // ── Event timer ───────────────────────────────────────────────
+  try { _db.run('ALTER TABLE events ADD COLUMN timer_end TEXT'); } catch {}
+  try { _db.run('ALTER TABLE events ADD COLUMN timer_remaining_ms INTEGER'); } catch {}
+  try { _db.run('ALTER TABLE events ADD COLUMN timer_running INTEGER NOT NULL DEFAULT 0'); } catch {}
+
   // ── Roulette tables ──────────────────────────────────────────
   _db.run(`CREATE TABLE IF NOT EXISTS roulette_bosses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

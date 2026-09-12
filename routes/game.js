@@ -297,5 +297,11 @@ module.exports = function makeGameRouter(broadcast) {
     res.json({ ok: true, submissionId: result.lastInsertRowid });
   });
 
+  router.get('/events/:id/timer', (req, res) => {
+    const ev = db.get('SELECT timer_end, timer_remaining_ms, timer_running FROM events WHERE id = ?', [req.params.id]);
+    if (!ev) return res.status(404).json({ error: 'Event not found' });
+    res.json({ event_id: Number(req.params.id), timer_end: ev.timer_end, timer_remaining_ms: ev.timer_remaining_ms, timer_running: ev.timer_running ? 1 : 0 });
+  });
+
   return router;
 };
