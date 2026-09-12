@@ -542,6 +542,7 @@ async function submitDrop() {
     const res = await fetch(`/api/events/${currentEventId}/submit`, { method: 'POST', body: form });
     const data = await res.json();
     if (data.ok) {
+      playSuccessChime();
       statusEl.className = 'success';
       statusEl.textContent = 'Drop submitted! Awaiting admin approval.';
       setTimeout(closeSubmitModal, 2000);
@@ -636,6 +637,27 @@ async function loadFeed() {
 }
 
 setInterval(() => { if (currentEventId) loadFeed(); }, 60000);
+
+function playSuccessChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const t = ctx.currentTime + i * 0.12;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.18, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      osc.start(t);
+      osc.stop(t + 0.35);
+    });
+  } catch {}
+}
 
 // ── Timer ────────────────────────────────────────────────────
 function renderBingoTimer() {
