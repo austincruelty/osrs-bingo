@@ -1554,7 +1554,9 @@ async function timerSet() {
   const hours   = Number(document.getElementById('timer-hours').value)   || 0;
   const minutes = Number(document.getElementById('timer-minutes').value) || 0;
   const res = await adminFetch(`/api/admin/events/${selectedEventId}/timer/set`, {
-    method: 'POST', body: JSON.stringify({ days, hours, minutes })
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ days, hours, minutes })
   });
   if (res.ok) renderAdminTimer(await res.json());
 }
