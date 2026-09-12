@@ -106,16 +106,19 @@ async function loadEvents() {
     return;
   }
 
-  events.forEach(ev => {
+  const active = events.filter(ev => ev.status === 'active');
+  const ended  = events.filter(ev => ev.status !== 'active');
+
+  function makeBtn(ev) {
     const opt = document.createElement('option');
     opt.value = ev.id;
     opt.textContent = `${ev.name} (${ev.status})`;
     eventSelect.appendChild(opt);
 
     const btn = document.createElement('button');
-    btn.className = 'landing-event-btn';
     const typeTag = ev.game_type === 'roulette' ? ' 🎰' : '';
-    btn.innerHTML = `<span class="landing-event-name">${escHtml(ev.name)}${typeTag}</span><span class="landing-event-status ${ev.status}">${ev.status}</span>`;
+    btn.className = 'landing-event-btn' + (ev.status === 'ended' ? ' ended' : '');
+    btn.innerHTML = `<span class="landing-event-name">${escHtml(ev.name)}${typeTag}</span><span class="landing-event-status ${ev.status}">${ev.status === 'active' ? 'Live' : 'Ended'}</span>`;
     btn.addEventListener('click', () => {
       if (ev.game_type === 'roulette') {
         window.location.href = `/roulette.html?event=${ev.id}`;
@@ -123,8 +126,24 @@ async function loadEvents() {
         landingSelectEvent(String(ev.id));
       }
     });
-    landingContainer.appendChild(btn);
-  });
+    return btn;
+  }
+
+  active.forEach(ev => landingContainer.appendChild(makeBtn(ev)));
+
+  if (ended.length) {
+    if (active.length) {
+      const divider = document.createElement('div');
+      divider.className = 'landing-section-label';
+      divider.textContent = 'Past Events';
+      landingContainer.appendChild(divider);
+    }
+    ended.forEach(ev => landingContainer.appendChild(makeBtn(ev)));
+  }
+
+  if (!active.length && !ended.length) {
+    landingContainer.innerHTML = '<p class="landing-no-events">No events found.</p>';
+  }
 }
 
 function showLanding() {
@@ -154,6 +173,8 @@ eventSelect.addEventListener('change', () => {
   } else {
     boardEl.innerHTML = '';
     document.getElementById('scoreboard').style.display = 'none';
+    const eb = document.getElementById('ended-banner'); if (eb) eb.style.display = 'none';
+    const sb = document.getElementById('submit-btn'); if (sb) sb.style.display = '';
     const legend = document.getElementById('legend');
     if (legend) legend.style.display = 'none';
     document.getElementById('team-view-bar').style.display = 'none';
@@ -361,6 +382,13 @@ function renderBoard(data) {
   }
 
   statusBar.textContent = `${event.name} · ${event.status} · ${tiles.length} tiles`;
+
+  // ── Ended event read-only state ──
+  const isEnded = event.status === 'ended';
+  const submitBtn = document.getElementById('submit-btn');
+  const endedBanner = document.getElementById('ended-banner');
+  if (submitBtn) submitBtn.style.display = isEnded ? 'none' : '';
+  if (endedBanner) endedBanner.style.display = isEnded ? 'block' : 'none';
 
   // ── Rules section ──
   const rulesSection = document.getElementById('rules-section');

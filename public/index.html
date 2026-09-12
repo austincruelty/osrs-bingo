@@ -452,7 +452,11 @@
       text-transform: uppercase;
       margin-bottom: 16px;
     }
-    #landing-events { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 380px; }
+    #landing-events { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 420px; }
+    .landing-section-label {
+      font-size: 0.62rem; color: #556; text-transform: uppercase; letter-spacing: 0.15em;
+      padding-bottom: 6px; border-bottom: 1px solid #1e2a40; margin-bottom: 2px; margin-top: 8px;
+    }
     .landing-event-btn {
       background: linear-gradient(135deg, #111827, #0f1e3a);
       border: 1px solid #2a3a54;
@@ -471,6 +475,16 @@
       box-shadow: 0 0 20px #c89b3c22;
       transform: translateY(-2px);
     }
+    .landing-event-btn.ended {
+      opacity: 0.6;
+      border-color: #1e2a40;
+    }
+    .landing-event-btn.ended:hover {
+      opacity: 0.85;
+      border-color: #4a7fc166;
+      box-shadow: none;
+      transform: none;
+    }
     .landing-event-name {
       font-family: 'Cinzel', serif;
       font-size: 1.05rem;
@@ -487,8 +501,22 @@
       flex-shrink: 0;
     }
     .landing-event-status.active { background: #1e5a2a; color: #6bff9e; }
-    .landing-event-status.ended  { background: #2a2a2a; color: #666; }
+    .landing-event-status.ended  { background: #1a1a2a; color: #445; }
     .landing-no-events { color: #445; font-size: 0.9rem; font-style: italic; }
+
+    /* Ended event banner */
+    #ended-banner {
+      display: none;
+      background: linear-gradient(135deg, #1a1208, #0f1220);
+      border: 1px solid #3a3020;
+      border-left: 3px solid #c89b3c66;
+      border-radius: 6px;
+      padding: 10px 16px;
+      margin: 0 24px 0;
+      font-size: 0.82rem;
+      color: #8a7a58;
+    }
+    #ended-banner strong { color: #c89b3c; }
     .landing-footer { margin-top: 32px; font-size: 0.7rem; color: #2a3a54; }
 
     /* Modal */
@@ -596,6 +624,7 @@
 </header>
 <div class="header-glow"></div>
 
+<div id="ended-banner">📜 <strong>Final Standings</strong> — This event has ended. The board is read-only.</div>
 <div class="team-scoreboard" id="scoreboard" style="display:none"></div>
 
 <div class="legend" id="legend" style="display:none">

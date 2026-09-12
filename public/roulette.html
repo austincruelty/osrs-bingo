@@ -650,6 +650,24 @@ function switchTab(name) {
 function renderState() {
   const { teams, history, config, members, event } = currentState;
 
+  // Read-only mode for ended events
+  const isEnded = event?.status === 'ended';
+  ['btn-spin1','btn-spin2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isEnded ? 'none' : '';
+  });
+  let endedBanner = document.getElementById('roulette-ended-banner');
+  if (isEnded && !endedBanner) {
+    endedBanner = document.createElement('div');
+    endedBanner.id = 'roulette-ended-banner';
+    endedBanner.style.cssText = 'background:linear-gradient(135deg,#1a1208,#0f1220);border:1px solid #3a3020;border-left:3px solid #c89b3c66;border-radius:6px;padding:10px 16px;margin-bottom:16px;font-size:0.82rem;color:#8a7a58;';
+    endedBanner.innerHTML = '📜 <strong style="color:#c89b3c;">Final Standings</strong> — This event has ended. The board is read-only.';
+    const tabWheels = document.getElementById('tab-wheels');
+    if (tabWheels) tabWheels.prepend(endedBanner);
+  } else if (!isEnded && endedBanner) {
+    endedBanner.remove();
+  }
+
   // Team selectors
   const teamOpts = '<option value="">Select team...</option>' +
     teams.map(t => `<option value="${t.team_number}">${escHtml(t.team_name)}</option>`).join('');
