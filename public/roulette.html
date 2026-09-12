@@ -1036,8 +1036,7 @@ function playSpinSound() {
 socket.on('spin-announced', (data) => {
   if (String(data.event_id) !== String(currentEventId)) return;
   const isInitiator = data.initiator_socket && data.initiator_socket === socket.id;
-  showSpinToast(data);
-  playSpinSound();
+  setTimeout(() => { showSpinToast(data); playSpinSound(); }, 4500);
   // Animate the wheel for non-initiators
   if (!isInitiator) {
     const tier = data.wheel_tier;
